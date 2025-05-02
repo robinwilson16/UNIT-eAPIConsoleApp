@@ -1,0 +1,1 @@
+﻿Scaffold-Dbcontext "Data Source=uk-btn-sql8;Initial Catalog=Netsuite;persist security info=true;TrustServerCertificate=True;Integrated Security=true" Microsoft.EntityFrameworkCore.SqlServer -tables settings -OutputDir Models -Force -UseDatabaseNames
