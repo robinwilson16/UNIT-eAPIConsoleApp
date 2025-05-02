@@ -30,6 +30,7 @@ var serviceProvider = new ServiceCollection()
 .AddSingleton<ILogger>(log)
 .AddSingleton<IProcessService, ProcessService>()
 .AddSingleton<ISRSWebServicecs, UniteWebService>()
+.AddSingleton<IFinanceWebService, NetSuiteWebService>()
 .AddDbContextFactory<NetsuiteContext>() //Configurtion and datamart source
 .AddSingleton<IMapper>(mapper)
 .BuildServiceProvider();

@@ -1,13 +1,12 @@
 ﻿using NetSuiteIntegration.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Serilog;
 
 namespace NetSuiteIntegration.Services
 {
-    public class ProcessService: IProcessService
+    public class ProcessService(ISRSWebServicecs unnitewebservice, IFinanceWebService netsuitewebservice,  ILogger logger): IProcessService
     {
+        ISRSWebServicecs _unnitewebservice = unnitewebservice;
+        IFinanceWebService _netsuitewebservice = netsuitewebservice;
+        ILogger _Log = logger;
     }
 }

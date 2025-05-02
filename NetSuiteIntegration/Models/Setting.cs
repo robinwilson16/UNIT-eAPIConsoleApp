@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace NetSuiteIntegration.Models;
+﻿namespace NetSuiteIntegration.Models;
 
 public partial class Setting
 {
