@@ -31,6 +31,5 @@ namespace NetSuiteIntegration.Models
         public string? UniteTokenURL { get; set; }
 
         public string? UniteAPIKey { get; set; }
-
     }
 }
