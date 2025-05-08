@@ -19,6 +19,7 @@ namespace NetSuiteIntegration
         public static bool CanConnect { get; set; }
         public static string? UNITeAPIToken { get; set; }
         public static bool? UNITeSessionIsValid { get; set; } = false;
+        public static string? UNITeRepGenReportReference { get; set; } = "NetSuiteExport";
 
         static async Task<int> Main(string[] args)
         {
@@ -104,6 +105,7 @@ namespace NetSuiteIntegration
             log.Information("Start");
             //await process.DoSomething();
 
+            /*
             UniteWebService uniteWebService = new UniteWebService(log, appSettings);
 
             //Get Access Token
@@ -120,12 +122,15 @@ namespace NetSuiteIntegration
             else
                 Console.WriteLine($"\nError: Could not obtain access token from UNIT-e API. Check API Key and URL are correct");
 
-            StudentHESAParameter studentHESAParameter = new StudentHESAParameter
-            {
-                Surname = "Wilson"
-            };
+            List<UNITeEnrolment>? uniteEnrolments = await uniteWebService.ExportReport<List<UNITeEnrolment>>(UNITeRepGenReportReference ?? "");
 
-            List<StudentHESA> students = await uniteWebService.Find<StudentHESA, StudentHESAParameter>(studentHESAParameter);
+            if (uniteEnrolments != null)
+            {
+                foreach (UNITeEnrolment? uniteEnrolment in uniteEnrolments)
+                {
+                    Console.WriteLine($"\nUNIT-e Enrolment: {uniteEnrolment?.StudentRef} - {uniteEnrolment?.Surname} {uniteEnrolment?.Forename}");
+                }
+            }
 
 
 
@@ -143,28 +148,47 @@ namespace NetSuiteIntegration
                     Console.WriteLine($"\nError: UNIT-e API Session Could Not Be Invalidated (it may have expired already)");
                 }
             }
+            */
 
+            ////Not used - code for finding lists of students
+            //StudentHESAParameter studentHESAParameter = new StudentHESAParameter
+            //{
+            //    Surname = "Wilson"
+            //};
 
-            //HttpClient httpClient = new HttpClient();
+            //List<StudentHESA> students = await uniteWebService.Find<StudentHESA, StudentHESAParameter>(studentHESAParameter);
 
-            //Console.WriteLine($"\nObtaining Access Token from {appSettings?.UniteTokenURL} for UNIT-e API using API Key {appSettings?.UniteAPIKey}");
+            HttpClient httpClient = new HttpClient();
+            httpClient.BaseAddress = new Uri(appSettings.UniteBaseURL ?? "");
 
-            //if (appSettings != null)
-            //    UNITeAPIToken = await GetUNITeAPIToken(httpClient, appSettings);
+            Console.WriteLine($"\nObtaining Access Token from {appSettings?.UniteTokenURL} for UNIT-e API using API Key {appSettings?.UniteAPIKey}");
 
-            //if (!string.IsNullOrEmpty(UNITeAPIToken))
-            //    Console.WriteLine($"\nObtained Access Token: {UNITeAPIToken}");
+            if (appSettings != null)
+                UNITeAPIToken = await GetUNITeAPIToken(httpClient, appSettings);
 
-            //if (appSettings != null && UNITeSessionIsValid == true)
-            //    if (await InvalidateUNITeSession(httpClient, appSettings) == true)
-            //        UNITeSessionIsValid = false;
-            //    else
-            //        UNITeSessionIsValid = true;
+            if (!string.IsNullOrEmpty(UNITeAPIToken))
+                Console.WriteLine($"\nObtained Access Token: {UNITeAPIToken}");
 
-            //if (UNITeSessionIsValid == false)
-            //        Console.WriteLine($"\nUNIT-e API Session Successfully Invalidated (Logged Out)");
-            //    else
-            //        Console.WriteLine($"\nError: UNIT-e API Session Could Not Be Invalidated (it may have expired already)");
+            List<UNITeEnrolment>? uniteEnrolments = await GetUNITeRepGenReport<UNITeEnrolment>(httpClient, appSettings, UNITeRepGenReportReference);
+
+            if (uniteEnrolments != null)
+            {
+                foreach (UNITeEnrolment? uniteEnrolment in uniteEnrolments)
+                {
+                    Console.WriteLine($"\nUNIT-e Enrolment: {uniteEnrolment?.StudentRef} - {uniteEnrolment?.Surname} {uniteEnrolment?.Forename}");
+                }
+            }
+
+            if (appSettings != null && UNITeSessionIsValid == true)
+                if (await InvalidateUNITeSession(httpClient, appSettings) == true)
+                    UNITeSessionIsValid = false;
+                else
+                    UNITeSessionIsValid = true;
+
+            if (UNITeSessionIsValid == false)
+                Console.WriteLine($"\nUNIT-e API Session Successfully Invalidated (Logged Out)");
+            else
+                Console.WriteLine($"\nError: UNIT-e API Session Could Not Be Invalidated (it may have expired already)");
 
             log.Information("End");
 
@@ -173,95 +197,116 @@ namespace NetSuiteIntegration
 
 
         #region Custom Properties I Created But Are Not Needed
-        //public static async Task<string> GetUNITeAPIToken(HttpClient httpClient, ApplicationSettings appSettings)
-        //{
-        //    string apiToken = string.Empty;
+        public static async Task<string> GetUNITeAPIToken(HttpClient httpClient, ApplicationSettings appSettings)
+        {
+            string apiToken = string.Empty;
 
-        //    try
-        //    {
-        //        //Add API Key to Request
-        //        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", appSettings.UniteAPIKey);
+            try
+            {
+                //Add API Key to Request
+                httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", appSettings.UniteAPIKey);
 
-        //        apiToken = await httpClient.GetStringAsync(appSettings.UniteTokenURL);
+                apiToken = await httpClient.GetStringAsync(appSettings.UniteTokenURL);
 
-        //        UNITeSessionIsValid = true;
-        //    }
-        //    catch (HttpRequestException e)
-        //    {
+                UNITeSessionIsValid = true;
+            }
+            catch (HttpRequestException e)
+            {
 
-        //        Console.WriteLine(EndpointException(e, null));
-        //        return string.Empty;
-        //    }
+                Console.WriteLine(EndpointException(e, null));
+                return string.Empty;
+            }
 
-        //    return apiToken ?? string.Empty;
-        //}
+            return apiToken ?? string.Empty;
+        }
 
-        //public static async Task<bool> InvalidateUNITeSession(HttpClient httpClient, ApplicationSettings appSettings)
-        //{
-        //    bool IsLoggedOut = false;
-        //    string IsLoggedOutString = string.Empty;
-        //    string? invalidateSessionEndpoint = $"{appSettings.UniteBaseURL}/InvalidateSession";
+        public static async Task<List<T>?> GetUNITeRepGenReport<T>(HttpClient httpClient, ApplicationSettings appSettings, string? repGenReportName)
+        {
+            List<T>? reportData;
 
-        //    try
-        //    {
-        //        //Add API Token to Request
-        //        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("APISessionKey", UNITeAPIToken);
+            try
+            {
+                // Add API Key to Request
+                httpClient.DefaultRequestHeaders.TryAddWithoutValidation("APISessionKey", UNITeAPIToken);
+                string? reportURL = $"report/export/json/{repGenReportName}";
 
-        //        IsLoggedOutString = await httpClient.GetStringAsync(invalidateSessionEndpoint);
-        //    }
-        //    catch (HttpRequestException e)
-        //    {
+                reportData = await httpClient.GetFromJsonAsync<List<T>>(reportURL);
+            }
+            catch (HttpRequestException e)
+            {
+                Console.WriteLine(EndpointException(e, null));
+                return new List<T>();
+            }
 
-        //        Console.WriteLine(EndpointException(e, null));
-        //    }
+            return reportData;
+        }
 
-        //    bool.TryParse(IsLoggedOutString, out IsLoggedOut);
+        public static async Task<bool> InvalidateUNITeSession(HttpClient httpClient, ApplicationSettings appSettings)
+        {
+            bool IsLoggedOut = false;
+            string IsLoggedOutString = string.Empty;
+            string? invalidateSessionEndpoint = $"InvalidateSession";
 
-        //    return IsLoggedOut;
-        //}
+            try
+            {
+                //Add API Token to Request
+                //httpClient.DefaultRequestHeaders.TryAddWithoutValidation("APISessionKey", UNITeAPIToken);
 
-        //private static string EndpointException(Exception ex, int? recordID)
-        //{
-        //    string errorMsg = "";
-        //    if (ex.Message.Contains("The input does not contain any JSON tokens"))
-        //    {
-        //        //This is valid and the API returns 204 No Content which is eroneously logged as an error when it is not
-        //    }
-        //    else
-        //    {
-        //        CanConnect = false;
+                IsLoggedOutString = await httpClient.GetStringAsync(invalidateSessionEndpoint);
+            }
+            catch (HttpRequestException e)
+            {
 
-        //        if (ex.Message.Contains(HttpStatusCode.Unauthorized.ToString()))
-        //        {
-        //            errorMsg = $"You are not authorised to view this page";
-        //        }
-        //        else if (ex.Message.Contains("404 (Not Found)"))
-        //        {
-        //            if (recordID != null)
-        //            {
-        //                errorMsg = $"The record \"{recordID}\" requested does not exist";
-        //            }
-        //            else
-        //            {
-        //                errorMsg = $"The record does not exist";
-        //            }
-        //        }
-        //        else if (ex.Message.Contains("400 (Bad Request)"))
-        //        {
-        //            if (recordID != null)
-        //            {
-        //                errorMsg = $"The record \"{recordID}\" requested is invalid";
-        //            }
-        //            else
-        //            {
-        //                errorMsg = $"The record does not exist";
-        //            }
-        //        }
-        //        else errorMsg = $"Error: {ex.Message}";
-        //    }
+                Console.WriteLine(EndpointException(e, null));
+            }
 
-        //    return errorMsg;
-        //}
+            bool.TryParse(IsLoggedOutString, out IsLoggedOut);
+
+            return IsLoggedOut;
+        }
+
+        private static string EndpointException(Exception ex, int? recordID)
+        {
+            string errorMsg = "";
+            if (ex.Message.Contains("The input does not contain any JSON tokens"))
+            {
+                //This is valid and the API returns 204 No Content which is eroneously logged as an error when it is not
+            }
+            else
+            {
+                CanConnect = false;
+
+                if (ex.Message.Contains(HttpStatusCode.Unauthorized.ToString()))
+                {
+                    errorMsg = $"You are not authorised to view this page";
+                }
+                else if (ex.Message.Contains("404 (Not Found)"))
+                {
+                    if (recordID != null)
+                    {
+                        errorMsg = $"The record \"{recordID}\" requested does not exist";
+                    }
+                    else
+                    {
+                        errorMsg = $"The record does not exist";
+                    }
+                }
+                else if (ex.Message.Contains("400 (Bad Request)"))
+                {
+                    if (recordID != null)
+                    {
+                        errorMsg = $"The record \"{recordID}\" requested is invalid";
+                    }
+                    else
+                    {
+                        errorMsg = $"The record does not exist";
+                    }
+                }
+                else errorMsg = $"Error: {ex.Message}";
+            }
+
+            return errorMsg;
+        }
         #endregion
     }
 }
