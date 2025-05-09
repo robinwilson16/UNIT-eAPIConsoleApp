@@ -11,6 +11,12 @@ using System.Net;
 using System.Globalization;
 using System.Net.Http.Json;
 using UNITe.Business.Helper;
+using System.Security.Cryptography;
+using System.Text;
+using System.Web;
+using Newtonsoft.Json.Linq;
+using System.Text.Json;
+using System.Reflection.Metadata;
 
 namespace NetSuiteIntegration
 {
@@ -158,18 +164,47 @@ namespace NetSuiteIntegration
 
             //List<StudentHESA> students = await uniteWebService.Find<StudentHESA, StudentHESAParameter>(studentHESAParameter);
 
-            HttpClient httpClient = new HttpClient();
-            httpClient.BaseAddress = new Uri(appSettings.UniteBaseURL ?? "");
+            //UNIT-e HTTP Client
+            HttpClient httpClientUNITe = new HttpClient();
+            httpClientUNITe.BaseAddress = new Uri(appSettings.UniteBaseURL ?? "");
+
+            //NetSuite HTTP Client
+            HttpClient httpClientNetSuite = new HttpClient(new OAuth1Handler(appSettings))
+            {
+                BaseAddress = new Uri(appSettings.NetSuiteURL ?? "")
+            };
+            //httpClientNetSuite.DefaultRequestHeaders.Add("realm", appSettings.NetSuiteAccountID + "_SB1" ?? "");
+
+            //string nonce = Guid.NewGuid().ToString("N");
+            //string timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+            ////string signature = GenerateSignature(appSettings.NetSuiteConsumerSecret, appSettings.NetSuiteTokenSecret, nonce, timestamp, appSettings.NetSuiteURL ?? "", "GET", appSettings.NetSuiteConsumerKey ?? "", appSettings.NetSuiteAccountID ?? "" + "_SB1", "HMAC-SHA256", "1.0");
+            //var netSuiteParameters = new SortedDictionary<string, string>
+            //{
+            //    { "oauth_consumer_key", appSettings.NetSuiteConsumerKey ?? "" },
+            //    { "oauth_consumer_secret", appSettings.NetSuiteConsumerSecret ?? "" },
+            //    { "oauth_token", appSettings.NetSuiteTokenID ?? "" },
+            //    { "oauth_token_secret", appSettings.NetSuiteTokenSecret ?? "" },
+            //    { "oauth_realm", appSettings.NetSuiteAccountID + "_SB1" ?? "" },
+            //    { "oauth_nonce", nonce },
+            //    { "oauth_timestamp", timestamp },
+            //    { "oauth_signature_method", "HMAC-SHA256" },
+            //    { "oauth_version", "1.0" }
+            //};
+            //string parameterString = string.Join("&", netSuiteParameters.Select(kvp => $"{HttpUtility.UrlEncode(kvp.Key)}={HttpUtility.UrlEncode(kvp.Value)}"));
+
+
+            //HttpClient httpClientNetSuite = new HttpClient();
+            //httpClientNetSuite.BaseAddress = new Uri(appSettings.NetSuiteURL ?? "");
 
             Console.WriteLine($"\nObtaining Access Token from {appSettings?.UniteTokenURL} for UNIT-e API using API Key {appSettings?.UniteAPIKey}");
 
             if (appSettings != null)
-                UNITeAPIToken = await GetUNITeAPIToken(httpClient, appSettings);
+                UNITeAPIToken = await GetUNITeAPIToken(httpClientUNITe, appSettings);
 
             if (!string.IsNullOrEmpty(UNITeAPIToken))
                 Console.WriteLine($"\nObtained Access Token: {UNITeAPIToken}");
 
-            List<UNITeEnrolment>? uniteEnrolments = await GetUNITeRepGenReport<UNITeEnrolment>(httpClient, appSettings, UNITeRepGenReportReference);
+            List<UNITeEnrolment>? uniteEnrolments = await GetUNITeRepGenReport<UNITeEnrolment>(httpClientUNITe, appSettings, UNITeRepGenReportReference);
 
             if (uniteEnrolments != null)
             {
@@ -179,8 +214,13 @@ namespace NetSuiteIntegration
                 }
             }
 
+            NetSuiteCustomer? netSuiteCustomer = await GetNetSuiteRecord<NetSuiteCustomer>(httpClientNetSuite, appSettings, "customer", 5753);
+            Console.WriteLine($"\nNetSuite Customer: {netSuiteCustomer?.EntityID} - {netSuiteCustomer?.FirstName} {netSuiteCustomer?.LastName}");
+
+
+            //Invalidate Access Token for UNIT-e
             if (appSettings != null && UNITeSessionIsValid == true)
-                if (await InvalidateUNITeSession(httpClient, appSettings) == true)
+                if (await InvalidateUNITeSession(httpClientUNITe, appSettings) == true)
                     UNITeSessionIsValid = false;
                 else
                     UNITeSessionIsValid = true;
@@ -196,7 +236,7 @@ namespace NetSuiteIntegration
         }
 
 
-        #region Custom Properties I Created But Are Not Needed
+        #region UNIT-e Functions
         public static async Task<string> GetUNITeAPIToken(HttpClient httpClient, ApplicationSettings appSettings)
         {
             string apiToken = string.Empty;
@@ -264,6 +304,54 @@ namespace NetSuiteIntegration
 
             return IsLoggedOut;
         }
+        #endregion
+
+        #region NetSuite Functions
+        public static async Task<T?> GetNetSuiteRecord<T>(HttpClient httpClient, ApplicationSettings appSettings, string? recordType, int? recordID)
+        {
+            T? reportData = default;
+
+            try
+            {
+                string? recordURL = $"record/v1/{recordType}/{recordID}";
+                //string? recordURL = $"https://7383276-sb1.suitetalk.api.netsuite.com/services/rest/record/v1/customer/{recordID}";
+                reportData = await httpClient.GetFromJsonAsync<T>(recordURL);
+            }
+            catch (HttpRequestException e)
+            {
+                Console.WriteLine(EndpointException(e, null));
+                return reportData;
+            }
+
+            return reportData;
+        }
+
+        public static async Task<NetSuiteCustomer?> GetNetSuiteCustomer(HttpClient httpClient, FormUrlEncodedContent formParams, ApplicationSettings appSettings, int? customerID)
+        {
+            NetSuiteCustomer netSuiteCustomer = new NetSuiteCustomer();
+
+            try
+            {
+                string? customerURL = $"record/v1/customer/{customerID}";
+                
+                JsonSerializerOptions options = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true,
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                };
+
+                netSuiteCustomer = await httpClient.GetFromJsonAsync<NetSuiteCustomer>(customerURL, options);
+            }
+            catch (HttpRequestException e)
+            {
+                Console.WriteLine(EndpointException(e, null));
+                return new NetSuiteCustomer();
+            }
+
+            return netSuiteCustomer;
+        }
+
+        #endregion
 
         private static string EndpointException(Exception ex, int? recordID)
         {
@@ -307,7 +395,7 @@ namespace NetSuiteIntegration
 
             return errorMsg;
         }
-        #endregion
+        
     }
 }
 
