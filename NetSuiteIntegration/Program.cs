@@ -115,21 +115,21 @@ namespace NetSuiteIntegration
             UniteWebService uniteWebService = new UniteWebService(log, appSettings);
             NetSuiteWebService netSuiteWebService = new NetSuiteWebService(log, appSettings);
 
-            //Get Access Token
-            Console.WriteLine($"\nObtaining Access Token from {appSettings?.UniteTokenURL} for UNIT-e API using API Key {appSettings?.UniteAPIKey}");
-            UNITeAPIToken = await uniteWebService.GetGuid();
+            //Get Access Token - not used now as ExportReport function handles this
+            //Console.WriteLine($"\nObtaining Access Token from {appSettings?.UniteTokenURL} for UNIT-e API using API Key {appSettings?.UniteAPIKey}");
+            //UNITeAPIToken = await uniteWebService.GetGuid();
 
-            if (!string.IsNullOrEmpty(UNITeAPIToken))
-                UNITeSessionIsValid = true;
-            else
-                UNITeSessionIsValid = false;
+            //if (!string.IsNullOrEmpty(UNITeAPIToken))
+            //    UNITeSessionIsValid = true;
+            //else
+            //    UNITeSessionIsValid = false;
 
-            if (UNITeSessionIsValid == true)
-                Console.WriteLine($"\nObtained Access Token: {UNITeAPIToken}");
-            else
-                Console.WriteLine($"\nError: Could not obtain access token from UNIT-e API. Check API Key and URL are correct");
+            //if (UNITeSessionIsValid == true)
+            //    Console.WriteLine($"\nObtained Access Token: {UNITeAPIToken}");
+            //else
+            //    Console.WriteLine($"\nError: Could not obtain access token from UNIT-e API. Check API Key and URL are correct");
 
-            List<UNITeEnrolment>? uniteEnrolments = await uniteWebService.ExportReport<List<UNITeEnrolment>>(UNITeRepGenReportReference ?? "", UNITeAPIToken);
+            List<UNITeEnrolment>? uniteEnrolments = await uniteWebService.ExportReport<List<UNITeEnrolment>>(UNITeRepGenReportReference ?? "");
 
             if (uniteEnrolments != null)
             {
@@ -145,23 +145,45 @@ namespace NetSuiteIntegration
                 BaseAddress = new Uri(appSettings.NetSuiteURL ?? "")
             };
 
-            NetSuiteCustomer? netSuiteCustomer = await netSuiteWebService.GetNetSuiteRecord<NetSuiteCustomer>("customer", 5753);
+            NetSuiteCustomer? netSuiteCustomer = await netSuiteWebService.Get<NetSuiteCustomer>("customer", 111005);
             Console.WriteLine($"\nNetSuite Customer: {netSuiteCustomer?.EntityID} - {netSuiteCustomer?.FirstName} {netSuiteCustomer?.LastName}");
 
-            //Invalidate Access Token
-            if (UNITeSessionIsValid == true)
-            {
-                if (await uniteWebService.InvalidateSession(UNITeAPIToken ?? ""))
-                {
-                    UNITeSessionIsValid = false;
-                    Console.WriteLine($"\nUNIT-e API Session Successfully Invalidated (Logged Out)");
-                }
-                else
-                {
-                    UNITeSessionIsValid = true;
-                    Console.WriteLine($"\nError: UNIT-e API Session Could Not Be Invalidated (it may have expired already)");
-                }
-            }
+            //if (netSuiteCustomer != null)
+            //{
+            //    //Was Nilsson
+            //    netSuiteCustomer.FirstName = "RobinTest";
+            //    netSuiteCustomer.LastName = "WilsonTest";
+
+            //    //If adding clear out IDs
+            //    netSuiteCustomer.ID = null;
+            //    netSuiteCustomer.ExternalID = "999999";
+            //    netSuiteCustomer.EntityID = "999999";
+            //}
+
+            //Update a record
+            //NetSuiteCustomer? updatedNetSuiteCustomer = await netSuiteWebService.Update<NetSuiteCustomer>("customer", 5753, netSuiteCustomer);
+
+            //Insert a record
+            //NetSuiteCustomer? insertedNetSuiteCustomer = await netSuiteWebService.Add<NetSuiteCustomer>("customer", netSuiteCustomer);
+
+            //Delete a record
+            bool? isDeleted = await netSuiteWebService.Delete<NetSuiteCustomer>("customer", 111005);
+
+            //List all records - does not work as does not return a set of customer objects
+            //List<NetSuiteCustomer>? netSuiteCustomers = await netSuiteWebService.GetAll<List<NetSuiteCustomer>>("customer");
+
+            //if (netSuiteCustomers != null)
+            //{
+            //    foreach (NetSuiteCustomer? customer in netSuiteCustomers)
+            //    {
+            //        Console.WriteLine($"\nNetSuite Customer: {customer?.EntityID} - {customer?.FirstName} {customer?.LastName}");
+            //    }
+            //}
+
+
+
+
+
 
             ////Not used - code for finding lists of students
             //StudentHESAParameter studentHESAParameter = new StudentHESAParameter

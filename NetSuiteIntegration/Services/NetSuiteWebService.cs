@@ -8,6 +8,7 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Threading.Tasks;
 using UNITe.XMLExporter.Entities;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace NetSuiteIntegration.Services
 {
@@ -16,7 +17,43 @@ namespace NetSuiteIntegration.Services
         ApplicationSettings _Settings = applicationSettings;
         ILogger _Log = log;
 
-        public async Task<T?> GetNetSuiteRecord<T>(string? recordType, int? recordID)
+        /// <inheritdoc />
+        public async Task<T?> Get<T>(string? objectType, int? objectID)
+        {
+            T? reportData = default(T);
+
+            try
+            {
+                HttpClient _httpClient = new HttpClient(new OAuth1Handler(_Settings));
+                _httpClient.BaseAddress = new Uri(_Settings.NetSuiteURL ?? "");
+
+
+                string? objectURL = $"record/v1/{objectType}/{objectID}";
+                //string? recordURL = $"https://7383276-sb1.suitetalk.api.netsuite.com/services/rest/record/v1/customer/{objectID}";
+                //reportData = await _httpClient.GetFromJsonAsync<T>(recordURL);
+                HttpResponseMessage response = await _httpClient.GetAsync(objectURL);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    reportData = await response.Content.ReadFromJsonAsync<T>();
+                    return reportData;
+                }
+                else
+                {
+                    string? errorMessage = response.Content.ReadAsStringAsync().Result;
+                    _Log.Error($"Failed to get the {objectType} record {objectID} due to error {errorMessage}");
+                    return default(T);
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                _Log.Error($"Failed to get the {objectType} record {objectID} due to error {ex.Message}");
+                return default(T);
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task<T?> GetAll<T>(string? objectType)
         {
             T? reportData = default;
 
@@ -26,10 +63,8 @@ namespace NetSuiteIntegration.Services
                 _httpClient.BaseAddress = new Uri(_Settings.NetSuiteURL ?? "");
 
 
-                string? recordURL = $"record/v1/{recordType}/{recordID}";
-                //string? recordURL = $"https://7383276-sb1.suitetalk.api.netsuite.com/services/rest/record/v1/customer/{recordID}";
-                //reportData = await _httpClient.GetFromJsonAsync<T>(recordURL);
-                HttpResponseMessage response = await _httpClient.GetAsync(recordURL);
+                string? objectURL = $"record/v1/{objectType}";
+                HttpResponseMessage response = await _httpClient.GetAsync(objectURL);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -38,14 +73,172 @@ namespace NetSuiteIntegration.Services
                 }
                 else
                 {
-                    _Log.Error($"Failed to load the {recordType} record {recordID}");
-                    return default;
+                    string? errorMessage = response.Content.ReadAsStringAsync().Result;
+                    _Log.Error($"Failed to get the {objectType} records due to error {errorMessage}");
+                    return default(T);
                 }
             }
-            catch (HttpRequestException e)
+            catch (HttpRequestException ex)
             {
-                _Log.Error($"Failed to load the {recordType} record {recordID}");
-                return default;
+                _Log.Error($"Failed to get the {objectType} records due to error {ex.Message}");
+                return default(T);
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task<T?> Add<T>(string? objectType, T? newObject)
+        {
+            T? returnedObject = default;
+
+            try
+            {
+                HttpClient _httpClient = new HttpClient(new OAuth1Handler(_Settings));
+                _httpClient.BaseAddress = new Uri(_Settings.NetSuiteURL ?? "");
+
+                if (newObject == null)
+                {
+                    _Log.Error($"The new {objectType} record does not contain any data");
+                    return default(T);
+                }
+
+                string? recordURL = $"record/v1/{objectType}";
+                HttpResponseMessage response = await _httpClient.PostAsJsonAsync<T>(recordURL, newObject!);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    try
+                    {
+                        //if the API does not return the new object then return the object that was sent
+                        returnedObject = await response.Content.ReadFromJsonAsync<T>();
+                    }
+                    catch (Exception ex)
+                    {
+                        returnedObject = newObject;
+                    }
+
+                    return returnedObject;
+                }
+                else
+                {
+                    string? errorMessage = response.Content.ReadAsStringAsync().Result;
+                    _Log.Error($"Failed to add the new {objectType} record due to error {errorMessage}");
+                    return default(T);
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                _Log.Error($"Failed to load add the new {objectType} record due to error {ex.Message}");
+                return default(T);
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task<T?> Update<T>(string? objectType, int? objectID, T? updatedObject)
+        {
+            T? existingObject = default;
+            T? returnedObject = default;
+
+            try
+            {
+                HttpClient _httpClient = new HttpClient(new OAuth1Handler(_Settings));
+                _httpClient.BaseAddress = new Uri(_Settings.NetSuiteURL ?? "");
+
+                existingObject = await Get<T>(objectType, objectID);
+
+                //Make sure object to be updated exists
+                if (existingObject == null)
+                {
+                    _Log.Error($"The {objectType} record {objectID} does not exist");
+                    return default(T);
+                }
+                else if (updatedObject == null)
+                {
+                    _Log.Error($"The updated {objectType} record for {objectID} does not contain any data");
+                    return default(T);
+                }
+
+                string? objectURL = $"record/v1/{objectType}/{objectID}";
+                //Put requires objects to be updated to be specified with this API so using Patch instead which works in the normal way
+                //If only certain fields are included the rest are left intact and not blanked as is often the case
+                //HttpResponseMessage response = await _httpClient.PutAsJsonAsync<T>(objectURL, updatedObject!); 
+                HttpResponseMessage response = await _httpClient.PatchAsJsonAsync<T>(objectURL, updatedObject!);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    try
+                    {
+                        //if the API does not return the updated object then return the object that was sent
+                        returnedObject = await response.Content.ReadFromJsonAsync<T>();
+                    }
+                    catch (Exception ex)
+                    {
+                        returnedObject = updatedObject;
+                    }
+
+                    return returnedObject;
+                }
+                else
+                {
+                    string? errorMessage = response.Content.ReadAsStringAsync().Result;
+                    _Log.Error($"Failed to update the {objectType} record {objectID} due to error {errorMessage}");
+                    return default(T);
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                _Log.Error($"Failed to update the {objectType} record {objectID} due to error {ex.Message}");
+                return default(T);
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task<bool?> Delete<T>(string? objectType, int? objectID)
+        {
+            T? existingObject = default;
+            T? returnedObject = default;
+
+            try
+            {
+                HttpClient _httpClient = new HttpClient(new OAuth1Handler(_Settings));
+                _httpClient.BaseAddress = new Uri(_Settings.NetSuiteURL ?? "");
+
+                existingObject = await Get<T>(objectType, objectID);
+
+                //Make sure object to be updated exists
+                if (existingObject == null)
+                {
+                    _Log.Error($"The {objectType} record {objectID} does not exist");
+                    return false;
+                }
+
+                string? objectURL = $"record/v1/{objectType}/{objectID}";
+                HttpResponseMessage response = await _httpClient.DeleteAsync(objectURL);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    try
+                    {
+                        //No object to return if deleting it so returning a bool instead
+                        //returnedObject = await response.Content.ReadFromJsonAsync<T>();
+                        return true;
+                    }
+                    catch (Exception ex)
+                    {
+                        //returnedObject = default(T);
+                        return false;
+                    }
+                }
+                else
+                {
+                    string? errorMessage = response.Content.ReadAsStringAsync().Result;
+                    _Log.Error($"Failed to update the {objectType} record {objectID} due to error {errorMessage}");
+                    return false;
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                _Log.Error($"Failed to update the {objectType} record {objectID} due to error {ex.Message}");
+                return false;
             }
         }
     }

@@ -14,6 +14,9 @@ namespace NetSuiteIntegration.Services
     {
         public static string GenerateOAuth1Header(string url, string method, ApplicationSettings appSettings)
         {
+            //Used for debugging where it will write out the OAuth parameters and signature base string to the console
+            bool? debug = false;
+
             string consumerKey = appSettings.NetSuiteConsumerKey ?? "";
             string consumerSecret = appSettings.NetSuiteConsumerSecret ?? "";
             string token = appSettings.NetSuiteTokenID ?? "";
@@ -34,10 +37,14 @@ namespace NetSuiteIntegration.Services
             };
 
             string parameterString = string.Join("&", parameters.Select(kvp => $"{URLEncodeUppercase(kvp.Key)}={URLEncodeUppercase(kvp.Value)}"));
-            Console.WriteLine($"\nNetSuite OAuth Parameters: {parameterString}");
+
+            if (debug == true)
+                Console.WriteLine($"\nNetSuite OAuth Parameters: {parameterString}");
 
             string signatureBaseString = $"{method.ToUpper()}&{URLEncodeUppercase(url)}&{URLEncodeUppercase(parameterString)}";
-            Console.WriteLine($"\nNetSuite Signature Base String: {signatureBaseString}");
+
+            if (debug == true)
+                Console.WriteLine($"\nNetSuite Signature Base String: {signatureBaseString}");
 
             string signingKey = $"{URLEncodeUppercase(consumerSecret)}&{URLEncodeUppercase(tokenSecret)}";
             using var hasher = new HMACSHA256(Encoding.UTF8.GetBytes(signingKey));
@@ -47,7 +54,10 @@ namespace NetSuiteIntegration.Services
             parameters.Add("oauth_signature", signature);
 
             string authHeader = "OAuth " + string.Join(", ", parameters.Select(kvp => $"{kvp.Key}=\"{URLEncodeUppercase(kvp.Value)}\""));
-            Console.WriteLine($"\nNetSuite Authorisation Header: {authHeader}");
+
+            if (debug == true)
+                Console.WriteLine($"\nNetSuite Authorisation Header: {authHeader}");
+
             return authHeader;
         }
 

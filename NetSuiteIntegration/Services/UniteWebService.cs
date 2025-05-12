@@ -33,7 +33,7 @@ namespace NetSuiteIntegration.Services
             }
             catch (Exception ex)
             {
-                _Log.Error("Failed to get GUID", ex.Message);
+                _Log.Error($"Failed to get GUID due to error {ex.Message}", ex.Message);
                 return null;
             }
         }
@@ -56,13 +56,14 @@ namespace NetSuiteIntegration.Services
                 }
                 else
                 {
-                    _Log.Error("Failed to invalidate session");
+                    string? errorMessage = response.Content.ReadAsStringAsync().Result;
+                    _Log.Error($"Failed to invalidate session due to error {errorMessage}");
                     return false;
                 }
             }
             catch (Exception ex)
             {
-                _Log.Warning("Failed to invalidate session", ex.Message);
+                _Log.Warning($"Failed to invalidate session due to error {ex.Message}", ex.Message);
                 return false;
             }
         }
@@ -83,7 +84,7 @@ namespace NetSuiteIntegration.Services
                 HttpClient _httpClient = new HttpClient();
                 _httpClient.BaseAddress = new Uri(_Settings.UniteBaseURL);
                 _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("APISessionKey", guid);
-                HttpResponseMessage response = await _httpClient.GetAsync("report/export/json/" + reportName);
+                HttpResponseMessage response = await _httpClient.GetAsync($"report/export/json/{reportName}");
                 await InvalidateSession(guid);
 
                 if (response.IsSuccessStatusCode)
@@ -93,13 +94,14 @@ namespace NetSuiteIntegration.Services
                 }
                 else
                 {
-                    _Log.Error("Failed to export report " + reportName);
+                    string? errorMessage = response.Content.ReadAsStringAsync().Result;
+                    _Log.Error($"Failed to export report{reportName} due to error {errorMessage}");
                     return default;
                 }
             }
             catch (Exception ex)
             {
-                _Log.Error("Failed to export report " + reportName, ex.Message);
+                _Log.Error($"Failed to export report {reportName} due to error {ex.Message}", ex.Message);
                 return default;
             }
         }
@@ -124,7 +126,7 @@ namespace NetSuiteIntegration.Services
                 HttpClient _httpClient = new HttpClient();
                 _httpClient.BaseAddress = new Uri(_Settings.UniteBaseURL);
                 _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("APISessionKey", guid);
-                HttpResponseMessage response = await _httpClient.GetAsync("report/export/json/" + reportName);
+                HttpResponseMessage response = await _httpClient.GetAsync($"report/export/json/{reportName}");
                 //await InvalidateSession(guid);
 
                 if (response.IsSuccessStatusCode)
@@ -134,13 +136,14 @@ namespace NetSuiteIntegration.Services
                 }
                 else
                 {
-                    _Log.Error("Failed to export report " + reportName);
+                    string? errorMessage = response.Content.ReadAsStringAsync().Result;
+                    _Log.Error($"Failed to export report {reportName} due to error {errorMessage}");
                     return default;
                 }
             }
             catch (Exception ex)
             {
-                _Log.Error("Failed to export report " + reportName, ex.Message);
+                _Log.Error($"Failed to export report {reportName} due to error {ex.Message}", ex.Message);
                 return default;
             }
         }
@@ -163,7 +166,7 @@ namespace NetSuiteIntegration.Services
                 _httpClient.BaseAddress = new Uri(_Settings.UniteBaseURL);
                 _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("APISessionKey", guid);
 
-                HttpResponseMessage response = await _httpClient.GetAsync("report/export/json/" + reportName);
+                HttpResponseMessage response = await _httpClient.GetAsync($"report/export/json/{reportName}");
                 await InvalidateSession(guid);
 
                 if (response.IsSuccessStatusCode)
@@ -175,13 +178,14 @@ namespace NetSuiteIntegration.Services
                 }
                 else
                 {
-                    _Log.Error("Failed to export report " + reportName);
+                    string? errorMessage = response.Content.ReadAsStringAsync().Result;
+                    _Log.Error($"Failed to export report {reportName} due to error {errorMessage}");
                     return default;
                 }
             }
             catch (Exception ex)
             {
-                _Log.Error("Failed to export report " + reportName, ex.Message);
+                _Log.Error($"Failed to export report {reportName} due to error {ex.Message}", ex.Message);
                 return default;
             }
         }
@@ -224,7 +228,7 @@ namespace NetSuiteIntegration.Services
                 HttpClient _httpClient = new HttpClient();
                 _httpClient.BaseAddress = new Uri(_Settings.UniteBaseURL);
                 _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("APISessionKey", guid);
-                HttpResponseMessage response = await _httpClient.GetAsync("class/get/" + resource + "/" + id);
+                HttpResponseMessage response = await _httpClient.GetAsync($"class/get/{resource}/{id}");
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -233,13 +237,14 @@ namespace NetSuiteIntegration.Services
                 }
                 else
                 {
-                    _Log.Error("Failed to get record");
+                    string? errorMessage = response.Content.ReadAsStringAsync().Result;
+                    _Log.Error($"Failed to get record due to error {errorMessage}");
                     return default;
                 }
             }
             catch (Exception ex)
             {
-                _Log.Error("Failed to get record", ex.Message);
+                _Log.Error($"Failed to get record due to error {ex.Message}", ex.Message);
                 return default;
             }
         }
@@ -261,7 +266,7 @@ namespace NetSuiteIntegration.Services
                 _httpClient.DefaultRequestHeaders.Accept.Clear();
                 _httpClient.DefaultRequestHeaders.Clear();
                 _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("APISessionKey", guid);
-                HttpResponseMessage response = await _httpClient.GetAsync("class/create/" + resource + "/");
+                HttpResponseMessage response = await _httpClient.GetAsync($"class/create/{resource}/");
                 if (response.IsSuccessStatusCode)
                 {
                     var blankrecord = await response.Content.ReadFromJsonAsync<T>();
@@ -269,13 +274,14 @@ namespace NetSuiteIntegration.Services
                 }
                 else
                 {
-                    _Log.Error("Failed to create record");
+                    string? errorMessage = response.Content.ReadAsStringAsync().Result;
+                    _Log.Error($"Failed to create record due to error {errorMessage}");
                     return default;
                 }
             }
             catch (Exception ex)
             {
-                _Log.Error("Failed to create record", ex.Message);
+                _Log.Error("Failed to create record due to error {ex.Message}", ex.Message);
                 return default;
             }
         }
@@ -302,22 +308,23 @@ namespace NetSuiteIntegration.Services
                 var prestringContent = HttpUtility.UrlEncode(jsonAddress);
                 StringContent stringContent = new StringContent("=" + prestringContent, Encoding.UTF8, @"application/x-www-form-urlencoded");
 
-                var postResponse = await _httpClient.PostAsync("class/insert/" + resource, stringContent);
+                var response = await _httpClient.PostAsync($"class/insert/{resource}", stringContent);
                 await InvalidateSession(guid);
 
-                if (postResponse.IsSuccessStatusCode)
+                if (response.IsSuccessStatusCode)
                 {
                     return true;
                 }
                 else
                 {
-                    _Log.Error("Failed to insert record");
+                    string? errorMessage = response.Content.ReadAsStringAsync().Result;
+                    _Log.Error($"Failed to insert record due to error {errorMessage}");
                     return false;
                 }
             }
             catch (Exception ex)
             {
-                _Log.Error("Failed to insert record", ex.Message);
+                _Log.Error($"Failed to insert record due to error {ex.Message}", ex.Message);
                 return false;
             }
         }
@@ -340,7 +347,7 @@ namespace NetSuiteIntegration.Services
 
                 StringContent stringContent = SerialiseObject(FindParameter);
 
-                var response = await _httpClient.PostAsync("class/find/" + resource, stringContent);
+                var response = await _httpClient.PostAsync($"class/find/{resource}", stringContent);
                 await InvalidateSession(guid);
 
                 if (response.IsSuccessStatusCode)
@@ -350,13 +357,14 @@ namespace NetSuiteIntegration.Services
                 }
                 else
                 {
-                    _Log.Error("Failed to find record");
+                    string? errorMessage = response.Content.ReadAsStringAsync().Result;
+                    _Log.Error($"Failed to find record due to error {errorMessage}");
                     return default;
                 }
             }
             catch (Exception ex)
             {
-                _Log.Error("Failed to find record", ex.Message);
+                _Log.Error($"Failed to find record due to error {ex.Message}", ex.Message);
                 return default;
             }
         }
@@ -386,21 +394,22 @@ namespace NetSuiteIntegration.Services
                 StringContent stringContent = new StringContent("=" + prestringContent, Encoding.UTF8, @"application/x-www-form-urlencoded");
 
                 //Update unite
-                var postResponse = await _httpClient.PostAsync("class/update/" + resource, stringContent);
+                var response = await _httpClient.PostAsync($"class/update/{resource}", stringContent);
 
-                if (postResponse.IsSuccessStatusCode)
+                if (response.IsSuccessStatusCode)
                 {
                     return true;
                 }
                 else
                 {
-                    _Log.Error("Failed to update record");
+                    string? errorMessage = response.Content.ReadAsStringAsync().Result;
+                    _Log.Error($"Failed to update record due to error {errorMessage}");
                     return false;
                 }
             }
             catch (Exception ex)
             {
-                _Log.Error("Failed to update record", ex.Message);
+                _Log.Error($"Failed to update record due to error {ex.Message}", ex.Message);
                 return false;
             }
         }
@@ -429,23 +438,24 @@ namespace NetSuiteIntegration.Services
 
 
                 //Update unite
-                HttpResponseMessage postResponse = await _httpClient.PostAsync("class/updateproperty/" + resource + "/", stringContent);
+                HttpResponseMessage response = await _httpClient.PostAsync($"class/updateproperty/{resource}/", stringContent);
 
                 await InvalidateSession(guid);
 
-                if (postResponse.IsSuccessStatusCode)
+                if (response.IsSuccessStatusCode)
                 {
                     return true;
                 }
                 else
                 {
-                    _Log.Error("Failed to update record");
+                    string? errorMessage = response.Content.ReadAsStringAsync().Result;
+                    _Log.Error($"Failed to update record due to error {errorMessage}");
                     return false;
                 }
             }
             catch (Exception ex)
             {
-                _Log.Error("Failed to update record", ex.Message);
+                _Log.Error($"Failed to update record due to error {ex.Message}", ex.Message);
                 return false;
             }
         }
