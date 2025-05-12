@@ -8,10 +8,9 @@ using Microsoft.EntityFrameworkCore;
 namespace NetSuiteIntegration.Models
 {
     [Keyless]
-    public class NetSuiteCustomerCurrency
+    public class NetSuiteCustomerListItem
     {
         public ICollection<NetSuiteCustomerLink>? Links { get; set; }
         public string? ID { get; set; }
-        public string? RefName { get; set; }
     }
 }

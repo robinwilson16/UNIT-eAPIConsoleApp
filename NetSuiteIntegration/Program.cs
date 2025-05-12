@@ -167,23 +167,18 @@ namespace NetSuiteIntegration
             //NetSuiteCustomer? insertedNetSuiteCustomer = await netSuiteWebService.Add<NetSuiteCustomer>("customer", netSuiteCustomer);
 
             //Delete a record
-            bool? isDeleted = await netSuiteWebService.Delete<NetSuiteCustomer>("customer", 111005);
+            //bool? isDeleted = await netSuiteWebService.Delete<NetSuiteCustomer>("customer", 111005);
 
-            //List all records - does not work as does not return a set of customer objects
-            //List<NetSuiteCustomer>? netSuiteCustomers = await netSuiteWebService.GetAll<List<NetSuiteCustomer>>("customer");
+            //List all records
+            NetSuiteCustomerList? netSuiteCustomerList = await netSuiteWebService.GetAll<NetSuiteCustomerList>("customer");
 
-            //if (netSuiteCustomers != null)
-            //{
-            //    foreach (NetSuiteCustomer? customer in netSuiteCustomers)
-            //    {
-            //        Console.WriteLine($"\nNetSuite Customer: {customer?.EntityID} - {customer?.FirstName} {customer?.LastName}");
-            //    }
-            //}
-
-
-
-
-
+            if (netSuiteCustomerList != null && netSuiteCustomerList?.Items?.Count > 0)
+            {
+                foreach (NetSuiteCustomerListItem? customer in netSuiteCustomerList!.Items)
+                {
+                    Console.WriteLine($"\nNetSuite Customer: {customer?.ID}");
+                }
+            }
 
             ////Not used - code for finding lists of students
             //StudentHESAParameter studentHESAParameter = new StudentHESAParameter

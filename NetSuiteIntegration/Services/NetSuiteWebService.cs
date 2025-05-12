@@ -4,6 +4,7 @@ using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Threading.Tasks;
@@ -33,7 +34,11 @@ namespace NetSuiteIntegration.Services
                 //reportData = await _httpClient.GetFromJsonAsync<T>(recordURL);
                 HttpResponseMessage response = await _httpClient.GetAsync(objectURL);
 
-                if (response.IsSuccessStatusCode)
+                if (response.StatusCode == HttpStatusCode.NoContent)
+                {
+                    return default(T);
+                }
+                else if (response.IsSuccessStatusCode)
                 {
                     reportData = await response.Content.ReadFromJsonAsync<T>();
                     return reportData;
@@ -66,7 +71,11 @@ namespace NetSuiteIntegration.Services
                 string? objectURL = $"record/v1/{objectType}";
                 HttpResponseMessage response = await _httpClient.GetAsync(objectURL);
 
-                if (response.IsSuccessStatusCode)
+                if (response.StatusCode == HttpStatusCode.NoContent)
+                {
+                    return default(T);
+                }
+                else if (response.IsSuccessStatusCode)
                 {
                     reportData = await response.Content.ReadFromJsonAsync<T>();
                     return reportData;
@@ -104,18 +113,14 @@ namespace NetSuiteIntegration.Services
                 string? recordURL = $"record/v1/{objectType}";
                 HttpResponseMessage response = await _httpClient.PostAsJsonAsync<T>(recordURL, newObject!);
 
-                if (response.IsSuccessStatusCode)
+                if (response.StatusCode == HttpStatusCode.NoContent)
                 {
-                    try
-                    {
-                        //if the API does not return the new object then return the object that was sent
-                        returnedObject = await response.Content.ReadFromJsonAsync<T>();
-                    }
-                    catch (Exception ex)
-                    {
-                        returnedObject = newObject;
-                    }
-
+                    //If no content then return the new object sent
+                    return newObject;
+                }
+                else if (response.IsSuccessStatusCode)
+                {
+                    returnedObject = await response.Content.ReadFromJsonAsync<T>();
                     return returnedObject;
                 }
                 else
@@ -159,22 +164,18 @@ namespace NetSuiteIntegration.Services
 
                 string? objectURL = $"record/v1/{objectType}/{objectID}";
                 //Put requires objects to be updated to be specified with this API so using Patch instead which works in the normal way
-                //If only certain fields are included the rest are left intact and not blanked as is often the case
+                //If only certain fields are included the rest are left intact and not blanked as is often the case with other APIs
                 //HttpResponseMessage response = await _httpClient.PutAsJsonAsync<T>(objectURL, updatedObject!); 
                 HttpResponseMessage response = await _httpClient.PatchAsJsonAsync<T>(objectURL, updatedObject!);
 
-                if (response.IsSuccessStatusCode)
+                if (response.StatusCode == HttpStatusCode.NoContent)
                 {
-                    try
-                    {
-                        //if the API does not return the updated object then return the object that was sent
-                        returnedObject = await response.Content.ReadFromJsonAsync<T>();
-                    }
-                    catch (Exception ex)
-                    {
-                        returnedObject = updatedObject;
-                    }
-
+                    //If no content then return the updated object sent
+                    return updatedObject;
+                }
+                else if (response.IsSuccessStatusCode)
+                {
+                    returnedObject = await response.Content.ReadFromJsonAsync<T>();
                     return returnedObject;
                 }
                 else
@@ -195,7 +196,6 @@ namespace NetSuiteIntegration.Services
         public async Task<bool?> Delete<T>(string? objectType, int? objectID)
         {
             T? existingObject = default;
-            T? returnedObject = default;
 
             try
             {
@@ -214,19 +214,14 @@ namespace NetSuiteIntegration.Services
                 string? objectURL = $"record/v1/{objectType}/{objectID}";
                 HttpResponseMessage response = await _httpClient.DeleteAsync(objectURL);
 
-                if (response.IsSuccessStatusCode)
+                if (response.StatusCode == HttpStatusCode.NoContent)
                 {
-                    try
-                    {
-                        //No object to return if deleting it so returning a bool instead
-                        //returnedObject = await response.Content.ReadFromJsonAsync<T>();
-                        return true;
-                    }
-                    catch (Exception ex)
-                    {
-                        //returnedObject = default(T);
-                        return false;
-                    }
+                    //If no content this is also valid
+                    return true;
+                }
+                else if (response.IsSuccessStatusCode)
+                {
+                    return true;
                 }
                 else
                 {

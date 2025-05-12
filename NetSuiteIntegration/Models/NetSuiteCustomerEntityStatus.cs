@@ -3,12 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
 namespace NetSuiteIntegration.Models
 {
+    [Keyless]
     public class NetSuiteCustomerEntityStatus
     {
-        public List<NetSuiteCustomerLink>? Links { get; set; }
+        public ICollection<NetSuiteCustomerLink>? Links { get; set; }
         public string? ID { get; set; }
         public string? RefName { get; set; }
     }
