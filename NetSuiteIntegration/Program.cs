@@ -72,7 +72,7 @@ namespace NetSuiteIntegration
             .AddSingleton<ApplicationSettings>()
             .AddSingleton<ILogger>(log)
             .AddSingleton<IProcessService, ProcessService>()
-            .AddSingleton<ISRSWebServicecs, UniteWebService>()
+            .AddSingleton<ISRSWebServicecs, UniteWebServiceOld>()
             .AddSingleton<IFinanceWebService, NetSuiteWebService>()
             .AddDbContextFactory<NetsuiteContext>() //Configurtion and datamart source
             .AddSingleton<IMapper>(mapper)
@@ -111,8 +111,9 @@ namespace NetSuiteIntegration
             log.Information("Start");
             //await process.DoSomething();
 
-            /*
+            
             UniteWebService uniteWebService = new UniteWebService(log, appSettings);
+            NetSuiteWebService netSuiteWebService = new NetSuiteWebService(log, appSettings);
 
             //Get Access Token
             Console.WriteLine($"\nObtaining Access Token from {appSettings?.UniteTokenURL} for UNIT-e API using API Key {appSettings?.UniteAPIKey}");
@@ -128,7 +129,7 @@ namespace NetSuiteIntegration
             else
                 Console.WriteLine($"\nError: Could not obtain access token from UNIT-e API. Check API Key and URL are correct");
 
-            List<UNITeEnrolment>? uniteEnrolments = await uniteWebService.ExportReport<List<UNITeEnrolment>>(UNITeRepGenReportReference ?? "");
+            List<UNITeEnrolment>? uniteEnrolments = await uniteWebService.ExportReport<List<UNITeEnrolment>>(UNITeRepGenReportReference ?? "", UNITeAPIToken);
 
             if (uniteEnrolments != null)
             {
@@ -138,7 +139,14 @@ namespace NetSuiteIntegration
                 }
             }
 
+            //NetSuite HTTP Client
+            HttpClient httpClientNetSuite = new HttpClient(new OAuth1Handler(appSettings))
+            {
+                BaseAddress = new Uri(appSettings.NetSuiteURL ?? "")
+            };
 
+            NetSuiteCustomer? netSuiteCustomer = await netSuiteWebService.GetNetSuiteRecord<NetSuiteCustomer>("customer", 5753);
+            Console.WriteLine($"\nNetSuite Customer: {netSuiteCustomer?.EntityID} - {netSuiteCustomer?.FirstName} {netSuiteCustomer?.LastName}");
 
             //Invalidate Access Token
             if (UNITeSessionIsValid == true)
@@ -154,7 +162,6 @@ namespace NetSuiteIntegration
                     Console.WriteLine($"\nError: UNIT-e API Session Could Not Be Invalidated (it may have expired already)");
                 }
             }
-            */
 
             ////Not used - code for finding lists of students
             //StudentHESAParameter studentHESAParameter = new StudentHESAParameter
@@ -164,238 +171,8 @@ namespace NetSuiteIntegration
 
             //List<StudentHESA> students = await uniteWebService.Find<StudentHESA, StudentHESAParameter>(studentHESAParameter);
 
-            //UNIT-e HTTP Client
-            HttpClient httpClientUNITe = new HttpClient();
-            httpClientUNITe.BaseAddress = new Uri(appSettings.UniteBaseURL ?? "");
-
-            //NetSuite HTTP Client
-            HttpClient httpClientNetSuite = new HttpClient(new OAuth1Handler(appSettings))
-            {
-                BaseAddress = new Uri(appSettings.NetSuiteURL ?? "")
-            };
-            //httpClientNetSuite.DefaultRequestHeaders.Add("realm", appSettings.NetSuiteAccountID + "_SB1" ?? "");
-
-            //string nonce = Guid.NewGuid().ToString("N");
-            //string timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
-            ////string signature = GenerateSignature(appSettings.NetSuiteConsumerSecret, appSettings.NetSuiteTokenSecret, nonce, timestamp, appSettings.NetSuiteURL ?? "", "GET", appSettings.NetSuiteConsumerKey ?? "", appSettings.NetSuiteAccountID ?? "" + "_SB1", "HMAC-SHA256", "1.0");
-            //var netSuiteParameters = new SortedDictionary<string, string>
-            //{
-            //    { "oauth_consumer_key", appSettings.NetSuiteConsumerKey ?? "" },
-            //    { "oauth_consumer_secret", appSettings.NetSuiteConsumerSecret ?? "" },
-            //    { "oauth_token", appSettings.NetSuiteTokenID ?? "" },
-            //    { "oauth_token_secret", appSettings.NetSuiteTokenSecret ?? "" },
-            //    { "oauth_realm", appSettings.NetSuiteAccountID + "_SB1" ?? "" },
-            //    { "oauth_nonce", nonce },
-            //    { "oauth_timestamp", timestamp },
-            //    { "oauth_signature_method", "HMAC-SHA256" },
-            //    { "oauth_version", "1.0" }
-            //};
-            //string parameterString = string.Join("&", netSuiteParameters.Select(kvp => $"{HttpUtility.UrlEncode(kvp.Key)}={HttpUtility.UrlEncode(kvp.Value)}"));
-
-
-            //HttpClient httpClientNetSuite = new HttpClient();
-            //httpClientNetSuite.BaseAddress = new Uri(appSettings.NetSuiteURL ?? "");
-
-            Console.WriteLine($"\nObtaining Access Token from {appSettings?.UniteTokenURL} for UNIT-e API using API Key {appSettings?.UniteAPIKey}");
-
-            if (appSettings != null)
-                UNITeAPIToken = await GetUNITeAPIToken(httpClientUNITe, appSettings);
-
-            if (!string.IsNullOrEmpty(UNITeAPIToken))
-                Console.WriteLine($"\nObtained Access Token: {UNITeAPIToken}");
-
-            List<UNITeEnrolment>? uniteEnrolments = await GetUNITeRepGenReport<UNITeEnrolment>(httpClientUNITe, appSettings, UNITeRepGenReportReference);
-
-            if (uniteEnrolments != null)
-            {
-                foreach (UNITeEnrolment? uniteEnrolment in uniteEnrolments)
-                {
-                    Console.WriteLine($"\nUNIT-e Enrolment: {uniteEnrolment?.StudentRef} - {uniteEnrolment?.Surname} {uniteEnrolment?.Forename}");
-                }
-            }
-
-            NetSuiteCustomer? netSuiteCustomer = await GetNetSuiteRecord<NetSuiteCustomer>(httpClientNetSuite, appSettings, "customer", 5753);
-            Console.WriteLine($"\nNetSuite Customer: {netSuiteCustomer?.EntityID} - {netSuiteCustomer?.FirstName} {netSuiteCustomer?.LastName}");
-
-
-            //Invalidate Access Token for UNIT-e
-            if (appSettings != null && UNITeSessionIsValid == true)
-                if (await InvalidateUNITeSession(httpClientUNITe, appSettings) == true)
-                    UNITeSessionIsValid = false;
-                else
-                    UNITeSessionIsValid = true;
-
-            if (UNITeSessionIsValid == false)
-                Console.WriteLine($"\nUNIT-e API Session Successfully Invalidated (Logged Out)");
-            else
-                Console.WriteLine($"\nError: UNIT-e API Session Could Not Be Invalidated (it may have expired already)");
-
-            log.Information("End");
-
             return 0;
         }
-
-
-        #region UNIT-e Functions
-        public static async Task<string> GetUNITeAPIToken(HttpClient httpClient, ApplicationSettings appSettings)
-        {
-            string apiToken = string.Empty;
-
-            try
-            {
-                //Add API Key to Request
-                httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", appSettings.UniteAPIKey);
-
-                apiToken = await httpClient.GetStringAsync(appSettings.UniteTokenURL);
-
-                UNITeSessionIsValid = true;
-            }
-            catch (HttpRequestException e)
-            {
-
-                Console.WriteLine(EndpointException(e, null));
-                return string.Empty;
-            }
-
-            return apiToken ?? string.Empty;
-        }
-
-        public static async Task<List<T>?> GetUNITeRepGenReport<T>(HttpClient httpClient, ApplicationSettings appSettings, string? repGenReportName)
-        {
-            List<T>? reportData;
-
-            try
-            {
-                // Add API Key to Request
-                httpClient.DefaultRequestHeaders.TryAddWithoutValidation("APISessionKey", UNITeAPIToken);
-                string? reportURL = $"report/export/json/{repGenReportName}";
-
-                reportData = await httpClient.GetFromJsonAsync<List<T>>(reportURL);
-            }
-            catch (HttpRequestException e)
-            {
-                Console.WriteLine(EndpointException(e, null));
-                return new List<T>();
-            }
-
-            return reportData;
-        }
-
-        public static async Task<bool> InvalidateUNITeSession(HttpClient httpClient, ApplicationSettings appSettings)
-        {
-            bool IsLoggedOut = false;
-            string IsLoggedOutString = string.Empty;
-            string? invalidateSessionEndpoint = $"InvalidateSession";
-
-            try
-            {
-                //Add API Token to Request
-                //httpClient.DefaultRequestHeaders.TryAddWithoutValidation("APISessionKey", UNITeAPIToken);
-
-                IsLoggedOutString = await httpClient.GetStringAsync(invalidateSessionEndpoint);
-            }
-            catch (HttpRequestException e)
-            {
-
-                Console.WriteLine(EndpointException(e, null));
-            }
-
-            bool.TryParse(IsLoggedOutString, out IsLoggedOut);
-
-            return IsLoggedOut;
-        }
-        #endregion
-
-        #region NetSuite Functions
-        public static async Task<T?> GetNetSuiteRecord<T>(HttpClient httpClient, ApplicationSettings appSettings, string? recordType, int? recordID)
-        {
-            T? reportData = default;
-
-            try
-            {
-                string? recordURL = $"record/v1/{recordType}/{recordID}";
-                //string? recordURL = $"https://7383276-sb1.suitetalk.api.netsuite.com/services/rest/record/v1/customer/{recordID}";
-                reportData = await httpClient.GetFromJsonAsync<T>(recordURL);
-            }
-            catch (HttpRequestException e)
-            {
-                Console.WriteLine(EndpointException(e, null));
-                return reportData;
-            }
-
-            return reportData;
-        }
-
-        public static async Task<NetSuiteCustomer?> GetNetSuiteCustomer(HttpClient httpClient, FormUrlEncodedContent formParams, ApplicationSettings appSettings, int? customerID)
-        {
-            NetSuiteCustomer netSuiteCustomer = new NetSuiteCustomer();
-
-            try
-            {
-                string? customerURL = $"record/v1/customer/{customerID}";
-                
-                JsonSerializerOptions options = new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true,
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                };
-
-                netSuiteCustomer = await httpClient.GetFromJsonAsync<NetSuiteCustomer>(customerURL, options);
-            }
-            catch (HttpRequestException e)
-            {
-                Console.WriteLine(EndpointException(e, null));
-                return new NetSuiteCustomer();
-            }
-
-            return netSuiteCustomer;
-        }
-
-        #endregion
-
-        private static string EndpointException(Exception ex, int? recordID)
-        {
-            string errorMsg = "";
-            if (ex.Message.Contains("The input does not contain any JSON tokens"))
-            {
-                //This is valid and the API returns 204 No Content which is eroneously logged as an error when it is not
-            }
-            else
-            {
-                CanConnect = false;
-
-                if (ex.Message.Contains(HttpStatusCode.Unauthorized.ToString()))
-                {
-                    errorMsg = $"You are not authorised to view this page";
-                }
-                else if (ex.Message.Contains("404 (Not Found)"))
-                {
-                    if (recordID != null)
-                    {
-                        errorMsg = $"The record \"{recordID}\" requested does not exist";
-                    }
-                    else
-                    {
-                        errorMsg = $"The record does not exist";
-                    }
-                }
-                else if (ex.Message.Contains("400 (Bad Request)"))
-                {
-                    if (recordID != null)
-                    {
-                        errorMsg = $"The record \"{recordID}\" requested is invalid";
-                    }
-                    else
-                    {
-                        errorMsg = $"The record does not exist";
-                    }
-                }
-                else errorMsg = $"Error: {ex.Message}";
-            }
-
-            return errorMsg;
-        }
-        
     }
 }
 

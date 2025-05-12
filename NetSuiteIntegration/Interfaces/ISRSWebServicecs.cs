@@ -31,13 +31,28 @@ namespace NetSuiteIntegration.Interfaces
         /// <typeparam name="T">A custom data model representing the expected return structure</typeparam>
         /// <param name="reportName">The name of the RepGen report</param>
         /// <returns></returns>
+
         Task<T?> ExportReport<T>(string reportName);
 
         /// <summary>
-        /// Exports a named report from the Unite API as a DataSet. The report must be configured in the Unite API first to be available and enabled in the WebAPI settings.
+        /// Exports a named report from the Unite API. The report must be configured in the Unite API first to be available
+        /// and set to be exportable in the Wev API settings
         /// </summary>
-        /// <param name="reportName">Name of the RepGen report</param>
-        /// <returns>A DataSet representing the structure and contents of the report</returns>
+        /// <typeparam name="T">A custom data model representing the expected return structure</typeparam>
+        /// <param name="reportName">The name of the RepGen report</param>
+        /// <returns></returns>
+
+        Task<T?> ExportReport<T>(string reportName, string? guid);
+
+        /// <summary>
+        /// Exports a named report from the Unite API. The report must be configured in the Unite API first to be available
+        /// and set to be exportable in the Wev API settings
+        /// </summary>
+        /// <typeparam name="T">A custom data model representing the expected return structure</typeparam>
+        /// <param name="reportName">The name of the RepGen report</param>
+        /// <param name="guid">The current GUID</param>
+        /// <returns></returns>
+
         Task<DataSet?> ExportReportDataSet(string reportName);
 
         //Generic methods

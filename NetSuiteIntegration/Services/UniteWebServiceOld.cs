@@ -1,17 +1,15 @@
 ﻿using NetSuiteIntegration.Interfaces;
 using NetSuiteIntegration.Models;
-//using Newtonsoft.Json;
+using Newtonsoft.Json;
 using Serilog;
 using System.Data;
-using System.Net.Http.Json;
 using System.Text;
-using System.Text.Json;
 using System.Web;
-//using Formatting = Newtonsoft.Json.Formatting;
+using Formatting = Newtonsoft.Json.Formatting;
 
 namespace NetSuiteIntegration.Services
 {
-    public class UniteWebService(ILogger log, ApplicationSettings applicationSettings) : ISRSWebServicecs
+    public class UniteWebServiceOld(ILogger log, ApplicationSettings applicationSettings) : ISRSWebServicecs
     {
         ApplicationSettings _Settings = applicationSettings;
         ILogger _Log = log;
@@ -21,15 +19,13 @@ namespace NetSuiteIntegration.Services
         /// <inheritdoc />
         public async Task<string?> GetGuid()
         {
-            string apiToken = string.Empty;
-
             try
             {
-                HttpClient _httpClient = new HttpClient();
+                var _httpClient = new HttpClient();
                 _httpClient.DefaultRequestHeaders.Clear();
                 _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", _Settings.UniteAPIKey);
-                apiToken = await _httpClient.GetStringAsync(_Settings.UniteTokenURL);
-                return apiToken;
+                var result = await _httpClient.GetAsync(_Settings.UniteTokenURL);
+                return result.Content.ReadAsStringAsync().GetAwaiter().GetResult();
             }
             catch (Exception ex)
             {
@@ -43,12 +39,12 @@ namespace NetSuiteIntegration.Services
         {
             try
             {
-                HttpClient _httpClient = new HttpClient();
+                var _httpClient = new HttpClient();
                 _httpClient.BaseAddress = new Uri(_Settings.UniteBaseURL);
                 _httpClient.DefaultRequestHeaders.Clear();
                 _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("APISessionKey", guid);
                 HttpResponseMessage response = await _httpClient.GetAsync("invalidatesession");
-                string jsonString = await response.Content.ReadAsStringAsync();
+                string jsonString = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -70,8 +66,6 @@ namespace NetSuiteIntegration.Services
         /// <inheritdoc />
         public async Task<T?> ExportReport<T>(string reportName)
         {
-            T? reportData;
-
             try
             {
                 string? guid = await GetGuid();
@@ -80,7 +74,7 @@ namespace NetSuiteIntegration.Services
                     return default;
                 }
 
-                HttpClient _httpClient = new HttpClient();
+                var _httpClient = new HttpClient();
                 _httpClient.BaseAddress = new Uri(_Settings.UniteBaseURL);
                 _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("APISessionKey", guid);
                 HttpResponseMessage response = await _httpClient.GetAsync("report/export/json/" + reportName);
@@ -88,8 +82,8 @@ namespace NetSuiteIntegration.Services
 
                 if (response.IsSuccessStatusCode)
                 {
-                    reportData = await response.Content.ReadFromJsonAsync<T>();
-                    return reportData;
+                    string jsonString = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                    return JsonConvert.DeserializeObject<T>(jsonString);
                 }
                 else
                 {
@@ -107,8 +101,6 @@ namespace NetSuiteIntegration.Services
         /// <inheritdoc />
         public async Task<T?> ExportReport<T>(string reportName, string? guid)
         {
-            T? reportData;
-
             try
             {
                 if (guid == null)
@@ -121,16 +113,16 @@ namespace NetSuiteIntegration.Services
                     return default;
                 }
 
-                HttpClient _httpClient = new HttpClient();
+                var _httpClient = new HttpClient();
                 _httpClient.BaseAddress = new Uri(_Settings.UniteBaseURL);
                 _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("APISessionKey", guid);
                 HttpResponseMessage response = await _httpClient.GetAsync("report/export/json/" + reportName);
-                //await InvalidateSession(guid);
+                await InvalidateSession(guid);
 
                 if (response.IsSuccessStatusCode)
                 {
-                    reportData = await response.Content.ReadFromJsonAsync<T>();
-                    return reportData;
+                    string jsonString = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                    return JsonConvert.DeserializeObject<T>(jsonString);
                 }
                 else
                 {
@@ -148,9 +140,6 @@ namespace NetSuiteIntegration.Services
         /// <inheritdoc />
         public async Task<DataSet?> ExportReportDataSet(string reportName)
         {
-            DataTable? dataTable = new DataTable();
-
-
             try
             {
                 string? guid = await GetGuid();
@@ -158,8 +147,7 @@ namespace NetSuiteIntegration.Services
                 {
                     return null;
                 }
-
-                HttpClient _httpClient = new HttpClient();
+                var _httpClient = new HttpClient();
                 _httpClient.BaseAddress = new Uri(_Settings.UniteBaseURL);
                 _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("APISessionKey", guid);
 
@@ -168,9 +156,9 @@ namespace NetSuiteIntegration.Services
 
                 if (response.IsSuccessStatusCode)
                 {
-                    dataTable = await response.Content.ReadFromJsonAsync<DataTable>();
+                    string jsonString = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
                     DataSet ds = new DataSet();
-                    ds.Tables.Add(dataTable ?? new DataTable());
+                    ds.Tables.Add(JsonConvert.DeserializeObject<DataTable>(jsonString));
                     return ds;
                 }
                 else
@@ -194,7 +182,8 @@ namespace NetSuiteIntegration.Services
         /// <returns></returns>
         private StringContent SerialiseObject<T>(T t)
         {
-            string jsonAddress = JsonSerializer.Serialize(t);
+            var jsonSettings = new JsonSerializerSettings() { TypeNameHandling = TypeNameHandling.All };
+            string jsonAddress = JsonConvert.SerializeObject(t, jsonSettings);
             //fix issues when working between .Net Framework and .Net. Not sure if this is still needed.
             jsonAddress = jsonAddress.Replace("System.Private.CoreLib", "mscorlib");
             var prestringContent = HttpUtility.UrlEncode(jsonAddress);
@@ -220,15 +209,15 @@ namespace NetSuiteIntegration.Services
                 {
                     return default;
                 }
-
-                HttpClient _httpClient = new HttpClient();
+                var _httpClient = new HttpClient();
                 _httpClient.BaseAddress = new Uri(_Settings.UniteBaseURL);
                 _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("APISessionKey", guid);
-                HttpResponseMessage response = await _httpClient.GetAsync("class/get/" + resource + "/" + id);
+                HttpResponseMessage response = _httpClient.GetAsync("class/get/" + resource + "/" + id).GetAwaiter().GetResult();
 
                 if (response.IsSuccessStatusCode)
                 {
-                    var entity = await response.Content.ReadFromJsonAsync<T>();
+                    var jsonSettings = new JsonSerializerSettings() { TypeNameHandling = TypeNameHandling.All };
+                    var entity = JsonConvert.DeserializeObject<T>(response.Content.ReadAsStringAsync().GetAwaiter().GetResult(), jsonSettings);
                     return entity;
                 }
                 else
@@ -255,16 +244,15 @@ namespace NetSuiteIntegration.Services
                 {
                     return default;
                 }
-
-                HttpClient _httpClient = new HttpClient();
+                var _httpClient = new HttpClient();
                 _httpClient.BaseAddress = new Uri(_Settings.UniteBaseURL);
                 _httpClient.DefaultRequestHeaders.Accept.Clear();
                 _httpClient.DefaultRequestHeaders.Clear();
                 _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("APISessionKey", guid);
-                HttpResponseMessage response = await _httpClient.GetAsync("class/create/" + resource + "/");
+                HttpResponseMessage response = _httpClient.GetAsync("class/create/" + resource + "/").GetAwaiter().GetResult();
                 if (response.IsSuccessStatusCode)
                 {
-                    var blankrecord = await response.Content.ReadFromJsonAsync<T>();
+                    var blankrecord = JsonConvert.DeserializeObject<T>(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
                     return blankrecord;
                 }
                 else
@@ -292,13 +280,13 @@ namespace NetSuiteIntegration.Services
                     return false;
                 }
 
-                HttpClient _httpClient = new HttpClient();
+                var _httpClient = new HttpClient();
                 _httpClient.BaseAddress = new Uri(_Settings.UniteBaseURL);
                 _httpClient.DefaultRequestHeaders.Accept.Clear();
                 _httpClient.DefaultRequestHeaders.Clear();
                 _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("APISessionKey", guid);
 
-                string jsonAddress = JsonSerializer.Serialize(insert);
+                string jsonAddress = JsonConvert.SerializeObject(insert);
                 var prestringContent = HttpUtility.UrlEncode(jsonAddress);
                 StringContent stringContent = new StringContent("=" + prestringContent, Encoding.UTF8, @"application/x-www-form-urlencoded");
 
@@ -334,9 +322,10 @@ namespace NetSuiteIntegration.Services
                     return default;
                 }
 
-                HttpClient _httpClient = new HttpClient();
+                var _httpClient = new HttpClient();
                 _httpClient.BaseAddress = new Uri(_Settings.UniteBaseURL);
                 _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("APISessionKey", guid);
+                var jsonSettings = new JsonSerializerSettings() { TypeNameHandling = TypeNameHandling.All };
 
                 StringContent stringContent = SerialiseObject(FindParameter);
 
@@ -345,8 +334,8 @@ namespace NetSuiteIntegration.Services
 
                 if (response.IsSuccessStatusCode)
                 {
-                    List<T>? foundrecords = await response.Content.ReadFromJsonAsync<List<T>?>();
-                    return foundrecords ?? new List<T>();
+                    List<T> foundrecords = JsonConvert.DeserializeObject<List<T>>(response.Content.ReadAsStringAsync().GetAwaiter().GetResult(), jsonSettings);
+                    return foundrecords;
                 }
                 else
                 {
@@ -372,12 +361,12 @@ namespace NetSuiteIntegration.Services
                 {
                     return false;
                 }
-
-                HttpClient _httpClient = new HttpClient();
+                var _httpClient = new HttpClient();
                 _httpClient.BaseAddress = new Uri(_Settings.UniteBaseURL);
                 _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("APISessionKey", guid);
 
-                string jsonAddress = JsonSerializer.Serialize(record);
+                var jsonSettings = new JsonSerializerSettings() { TypeNameHandling = TypeNameHandling.All, PreserveReferencesHandling = PreserveReferencesHandling.All, Formatting = Formatting.Indented };
+                string jsonAddress = JsonConvert.SerializeObject(record, jsonSettings);
 
                 //Encode any special characters in the JSON string
                 var prestringContent = HttpUtility.UrlEncode(jsonAddress);
@@ -416,13 +405,13 @@ namespace NetSuiteIntegration.Services
                 {
                     return false;
                 }
-
-                HttpClient _httpClient = new HttpClient();
+                var _httpClient = new HttpClient();
                 _httpClient.BaseAddress = new Uri(_Settings.UniteBaseURL);
                 _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("APISessionKey", guid);
 
                 //May need to not include type information
-                string jsonAddress = JsonSerializer.Serialize(record);
+                JsonSerializerSettings jsonSettings = new() { TypeNameHandling = TypeNameHandling.None };
+                string jsonAddress = JsonConvert.SerializeObject(record, jsonSettings);
                 jsonAddress = jsonAddress.Replace("System.Private.CoreLib", "mscorlib");
                 string prestringContent = HttpUtility.UrlEncode(jsonAddress);
                 StringContent stringContent = new("=" + prestringContent, Encoding.UTF8, @"application/x-www-form-urlencoded");
