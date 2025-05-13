@@ -55,4 +55,9 @@
     </None>
   </ItemGroup>
 
+    <!-- Embed PDB file into .exe for single file publish-->
+	<PropertyGroup>
+		<DebugType>embedded</DebugType>
+	</PropertyGroup>
+	
 </Project>

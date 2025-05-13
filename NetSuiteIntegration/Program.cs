@@ -31,16 +31,17 @@ namespace NetSuiteIntegration
         {
             string? locale = "en-GB";
 
-            Console.WriteLine($"\nNetSuite Integration Utility\n");
-            Console.WriteLine($"=========================================\n");
+            Console.WriteLine($"NetSuite Integration Utility");
+            Console.WriteLine($"=========================================");
 
             string? productVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString();
-            Console.WriteLine($"Version {productVersion}");
-            Console.WriteLine($"Copyright BIMM");
+            Console.WriteLine($"\nVersion {productVersion}");
+            Console.WriteLine($"\nCopyright BIMM");
 
 
             Console.WriteLine($"\nSetting Locale To {locale}");
 
+            #region Setup and Logging
             //Set locale to ensure dates and currency are correct
             CultureInfo culture = new CultureInfo(locale ?? "en-GB");
             Thread.CurrentThread.CurrentCulture = culture;
@@ -107,7 +108,9 @@ namespace NetSuiteIntegration
                 log.Error("Process service not found");
                 return 1;
             }
+            #endregion
 
+            #region Main Logic and Process
             log.Information("Start");
             //await process.DoSomething();
 
@@ -179,6 +182,7 @@ namespace NetSuiteIntegration
                     Console.WriteLine($"\nNetSuite Customer: {customer?.ID}");
                 }
             }
+            #endregion
 
             ////Not used - code for finding lists of students
             //StudentHESAParameter studentHESAParameter = new StudentHESAParameter

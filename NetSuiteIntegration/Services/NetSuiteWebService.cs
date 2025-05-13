@@ -95,6 +95,93 @@ namespace NetSuiteIntegration.Services
         }
 
         /// <inheritdoc />
+        public async Task<T?> Search<T>(string? objectType, IList<NetSuiteSearchParameter> searchParameters)
+        {
+            //Usage:
+            //?q=companyName EMPTY
+            //?q=id BETWEEN_NOT [1, 42]
+            //?q=id ANY_OF [1, 2, 3, 4, 5]
+            //?q=email START_WITH barbara
+            //?q=companyname START_WITH "Another Company"
+            //?q=isinactive IS true
+            //?q=dateCreated ON_OR_AFTER "1/1/2019" AND dateCreated BEFORE "1/1/2020"
+            //?q=creditlimit GREATER_OR_EQUAL 1000 OR creditlimit LESS_OR_EQUAL 10
+            //Use parenthesis to group the search parameters -- TODO
+
+            T? reportData = default;
+
+            try
+            {
+                string? searchParams = string.Empty;
+
+                if (searchParameters == null || searchParameters.Count == 0)
+                {
+                    _Log.Error($"The search parameters for {objectType} are not valid");
+                    return default(T);
+                }
+
+                if (searchParameters != null)
+                {
+                    int paramNum = 0;
+                    foreach (NetSuiteSearchParameter? param in searchParameters)
+                    {
+                        if (param?.FieldName != null && param?.Operator != null)
+                        {
+                            paramNum++;
+                            string? joiningCharacter = "";
+
+                            if (paramNum == 1)
+                            {
+                                joiningCharacter = "?q=";
+                            }
+                            else
+                            {
+                                joiningCharacter = $" {param?.Operand} ";
+                            }
+
+                            if (param?.Value != null)
+                            {
+                                searchParams += $"{joiningCharacter}{param?.FieldName} {param?.Operator} {param?.Value}";
+                            }
+                            else
+                            {
+                                searchParams += $"{joiningCharacter}{param?.FieldName} {param?.Operator}";
+                            }
+                        }
+                    }
+                }
+
+                HttpClient _httpClient = new HttpClient(new OAuth1Handler(_Settings));
+                _httpClient.BaseAddress = new Uri(_Settings.NetSuiteURL ?? "");
+
+
+                string? objectURL = $"record/v1/{objectType}{searchParameters}";
+                HttpResponseMessage response = await _httpClient.GetAsync(objectURL);
+
+                if (response.StatusCode == HttpStatusCode.NoContent)
+                {
+                    return default(T);
+                }
+                else if (response.IsSuccessStatusCode)
+                {
+                    reportData = await response.Content.ReadFromJsonAsync<T>();
+                    return reportData;
+                }
+                else
+                {
+                    string? errorMessage = response.Content.ReadAsStringAsync().Result;
+                    _Log.Error($"Failed to get the {objectType} records due to error {errorMessage}");
+                    return default(T);
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                _Log.Error($"Failed to get the {objectType} records due to error {ex.Message}");
+                return default(T);
+            }
+        }
+
+        /// <inheritdoc />
         public async Task<T?> Add<T>(string? objectType, T? newObject)
         {
             T? returnedObject = default;

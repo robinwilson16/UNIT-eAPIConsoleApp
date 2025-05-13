@@ -52,7 +52,9 @@ namespace NetSuiteIntegration.Services
 
                 if (response.IsSuccessStatusCode)
                 {
-                    return Convert.ToBoolean(jsonString);
+                    bool jsonBool = false;
+                    bool.TryParse(jsonString, out jsonBool);
+                    return jsonBool;
                 }
                 else
                 {
