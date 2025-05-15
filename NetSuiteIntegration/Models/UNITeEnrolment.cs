@@ -18,6 +18,7 @@ namespace NetSuiteIntegration.Models
         [Column(TypeName = "decimal(16,0)")]
         public decimal? StudentID { get; set; }
         public string? StudentRef { get; set; }
+        public string? ExternalRef { get; set; }
         public string? ERPID { get; set; }
         public string? Surname { get; set; }
         public string? Forename { get; set; }
@@ -119,7 +120,8 @@ namespace NetSuiteIntegration.Models
         public string? CourseTypeCode { get; set; }
         public string? CourseTypeName { get; set; }
         public DateTime? StartDateEnrol { get; set; }
-        public DateTime? EndDateEnrol { get; set; }
+        public DateTime? ExpectedEndDateEnrol { get; set; }
+        public DateTime? ActualEndDateEnrol { get; set; }
         public DateTime? StartDateCourse { get; set; }
         public DateTime? EndDateCourse { get; set; }
         public string? EnrolmentStatusCode { get; set; }

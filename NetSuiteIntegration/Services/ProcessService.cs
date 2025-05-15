@@ -1,6 +1,8 @@
-﻿using NetSuiteIntegration.Interfaces;
+﻿using System.Globalization;
+using NetSuiteIntegration.Interfaces;
 using NetSuiteIntegration.Models;
 using Serilog;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace NetSuiteIntegration.Services
 {
@@ -10,14 +12,18 @@ namespace NetSuiteIntegration.Services
         IFinanceWebService? _netsuite = netsuite;
         ILogger? _log = logger;
 
-        public async Task<bool> Process(string? _repGen)
+        public async Task<bool> Process(string? _enrolmentRepGen)
         {
             //Steps
             //1. Get UNIT-e Enrolments in Scope
+            //2. Map to Distinct UNIT-e Students
+            //3. Map to NetSuite Customers
 
             // Check all parameters have values
             if (_log == null)
             {
+                //Output to console incase cannot initialise a new logger
+                Console.WriteLine("Logger is null/empty. This should reference the logger used to log messages.");
                 //Need to create a new logger instance if the logger is null to return the error
                 var logConfig = new LoggerConfiguration();
                 _log = logConfig.CreateLogger(); // Correctly create a logger instance
@@ -35,52 +41,123 @@ namespace NetSuiteIntegration.Services
                 return false;
             }
 
-            if (_repGen == null)
+            if (_enrolmentRepGen == null)
             {
-                _log?.Error("UNIT-e Report Reference is null/not specified. This should reference the RepGen Report used to extract the data.");
+                _log?.Error("UNIT-e Enrolment Report Reference is null/not specified. This should reference the RepGen Report used to extract the data.");
                 return false;
             }
 
+            //Set up lists of students and enrolments
+            IList<UNITeStudent>? uniteStudents = new List<UNITeStudent>();
+            IList<UNITeEnrolment>? uniteEnrolments = new List<UNITeEnrolment>();
+            IList<NetSuiteCustomer>? netSuiteCustomers = new List<NetSuiteCustomer>();
+
             try
             {
-                Console.WriteLine("\nLoading UNIT-e Enrolments...");
+                _log?.Information("\nLoading UNIT-e Enrolments...");
 
-                List<UNITeEnrolment>? uniteEnrolments = await _unite.ExportReport<List<UNITeEnrolment>>(_repGen ?? "");
-                Console.WriteLine("\nLoading UNIT-e Enrolments after...");
+                uniteEnrolments = await _unite.ExportReport<List<UNITeEnrolment>>(_enrolmentRepGen ?? "");
+
+
+                _log?.Information("\nLoading UNIT-e Enrolments after...");
                 if (uniteEnrolments == null)
                 {
-                    _log?.Error("No UNIT-e Enrolments found.");
+                    _log?.Information("No UNIT-e Enrolments found.");
                     return false;
                 }
                 else if (uniteEnrolments?.Count == 0)
                 {
-                    _log?.Error("No UNIT-e Enrolments To Be Imported Currently.");
+                    _log?.Information("No UNIT-e Enrolments To Be Imported Currently.");
                     return false;
                 }
                 else
                 {
-                    Console.WriteLine($"Found {uniteEnrolments?.Count} UNIT-e Enrolments To Be Imported.");
+                    _log?.Information($"Loaded {uniteEnrolments?.Count} UNIT-e Enrolments");
 
-                    foreach (UNITeEnrolment? uniteEnrolment in uniteEnrolments!)
+                    //Map UNIT-e Enrolments to UNIT-e Students
+                    uniteStudents = uniteEnrolments?.DistinctBy(e => e.StudentID)
+                        .Select(stu => new UNITeStudent { 
+                            StudentID = stu.StudentID, 
+                            StudentRef = stu.StudentRef,
+                            ERPID = stu.ERPID,
+                            Surname = stu.Surname,
+                            Forename = stu.Forename,
+                            PreferredName = stu.PreferredName,
+                            TitleCode = stu.TitleCode,
+                            TitleName = stu.TitleName,
+                            GenderCode = stu.GenderCode,
+                            GenderName = stu.GenderName,
+                            DateOfBirth = stu.DateOfBirth,
+                            UCASPersonalID = stu.UCASPersonalID,
+                            ULN = stu.ULN,
+                            Address = stu.Address,
+                            PostCode = stu.PostCode,
+                            EmailAddress = stu.EmailAddress,
+                            Mobile = stu.Mobile,
+                            HomePhone = stu.HomePhone,
+                            AcademicYearCode = stu.AcademicYearCode,
+                            AcademicYearName = stu.AcademicYearName
+                        }).ToList<UNITeStudent>();
+
+                    _log?.Information($"Loaded {uniteStudents?.Count} Distinct UNIT-e Students");
+
+                    //Map UNIT-e Students to NetSuite Customers
+                    netSuiteCustomers = uniteStudents?.Select(cus => new NetSuiteCustomer
                     {
-                        Console.WriteLine($"\nUNIT-e Enrolment: {uniteEnrolment?.StudentRef} - {uniteEnrolment?.Surname} {uniteEnrolment?.Forename}");
+                        CustentityclientStudentno = cus.StudentRef,
+                        ExternalID = cus.ERPID,
+                        LastName = cus.Surname,
+                        FirstName = cus.Forename,
+                        Email = cus.EmailAddress,
+                        IsPerson = true,
+                        IsInactive = false,
+                        DepositBalance = Convert.ToDouble(cus.FeeGross, CultureInfo.InvariantCulture)
+                        //Add any other mappings here
+                    }).ToList<NetSuiteCustomer>();
+
+                    int rowNumber = 0;
+                    foreach (NetSuiteCustomer? netSuiteCustomer in netSuiteCustomers!)
+                    {
+                        rowNumber++;
+                        _log?.Information($"\nRecord {rowNumber} of {netSuiteCustomers.Count}: Checking {netSuiteCustomer?.LastName}, {netSuiteCustomer?.FirstName} ({netSuiteCustomer?.CustentityclientStudentno})");
+
+                        //Check if the customer already exists in NetSuite by their 
+                        IList<NetSuiteSearchParameter> searchParameters = new List<NetSuiteSearchParameter>();
+                        NetSuiteSearchParameter param = (new NetSuiteSearchParameter {
+                            Operand = null,
+                            FieldName = "CustentityclientStudentno",
+                            Operator = Operator.IS,
+                            Value = netSuiteCustomer?.CustentityclientStudentno,
+                            IncludeOpeningParenthesis = false,
+                            IncludeClosingParenthesis = false
+                        });
+
+                        searchParameters.Add(param);
+
+                        NetSuiteCustomerList? customerList = await _netsuite.Search<NetSuiteCustomerList>("customer", searchParameters);
+
+                        if (rowNumber > 1)
+                            break;
                     }
                 }
 
-                NetSuiteCustomer? netSuiteCustomer = await _netsuite.Get<NetSuiteCustomer>("customer", 111005);
-                Console.WriteLine($"\nNetSuite Customer: {netSuiteCustomer?.EntityID} - {netSuiteCustomer?.FirstName} {netSuiteCustomer?.LastName}");
+                //NetSuiteCustomer? netSuiteCustomer = await _netsuite.Get<NetSuiteCustomer>("customer", 111005);
+                //_log?.Information($"\nNetSuite Customer: {netSuiteCustomer?.EntityID} - {netSuiteCustomer?.FirstName} {netSuiteCustomer?.LastName}");
 
-                if (netSuiteCustomer != null)
-                {
-                    //Was Nilsson
-                    netSuiteCustomer.FirstName = "RobinTest";
-                    netSuiteCustomer.LastName = "WilsonTest";
 
-                    //If adding clear out IDs
-                    netSuiteCustomer.ID = null;
-                    netSuiteCustomer.ExternalID = "999999";
-                    netSuiteCustomer.EntityID = "999999";
-                }
+
+                //Testing
+                //if (netSuiteCustomer != null)
+                //{
+                //    //Was Nilsson
+                //    netSuiteCustomer.FirstName = "RobinTest";
+                //    netSuiteCustomer.LastName = "WilsonTest";
+
+                //    //If adding clear out IDs
+                //    netSuiteCustomer.ID = null;
+                //    netSuiteCustomer.ExternalID = "999999";
+                //    netSuiteCustomer.EntityID = "999999";
+                //}
 
                 //Update a record
                 //NetSuiteCustomer? updatedNetSuiteCustomer = await _netsuite.Update<NetSuiteCustomer>("customer", 5753, netSuiteCustomer);
@@ -98,7 +175,7 @@ namespace NetSuiteIntegration.Services
                 //{
                 //    foreach (NetSuiteCustomerListItem? customer in netSuiteCustomerList!.Items)
                 //    {
-                //        Console.WriteLine($"\nNetSuite Customer: {customer?.ID}");
+                //        _log?.Information($"\nNetSuite Customer: {customer?.ID}");
                 //    }
                 //}
 
@@ -108,7 +185,6 @@ namespace NetSuiteIntegration.Services
             catch (Exception ex)
             {
                 _log?.Error($"Error in Process: {ex.Message}");
-                Console.WriteLine($"Error in Process: {ex.Message}");
                 return false;
             }
         }

@@ -114,7 +114,7 @@ namespace NetSuiteIntegration.Services
 
             try
             {
-                string? searchParams = string.Empty;
+                string? searchParamsString = string.Empty;
 
                 if (searchParameters == null || searchParameters.Count == 0)
                 {
@@ -145,28 +145,28 @@ namespace NetSuiteIntegration.Services
 
                             //The search parameters can contain opening and closing parenthesis to group the search parameters
                             //The number of opening and closing parenthesis must match otherwise the search will fail (below)
-                            string? prefix = string.Empty;
-                            string? suffix = string.Empty;
+                            string? queryPrefix = string.Empty;
+                            string? querySuffix = string.Empty;
 
                             if (param?.IncludeOpeningParenthesis == true)
                             {
-                                prefix = "(";
+                                queryPrefix = "(";
                                 numOpeningParenthesis++;
                             }
 
                             if (param?.IncludeClosingParenthesis == true)
                             {
-                                suffix = ")";
+                                querySuffix = ")";
                                 numClosingParenthesis++;
                             }
 
                             if (param?.Value != null)
                             {
-                                searchParams += $"{joiningCharacter}{prefix}{param?.FieldName} {param?.Operator} {param?.Value}{suffix}";
+                                searchParamsString += $"{joiningCharacter}{queryPrefix}{param?.FieldName} {param?.Operator} {param?.Value}{querySuffix}";
                             }
                             else
                             {
-                                searchParams += $"{joiningCharacter}{prefix}{param?.FieldName} {param?.Operator}{suffix}";
+                                searchParamsString += $"{joiningCharacter}{queryPrefix}{param?.FieldName} {param?.Operator}{querySuffix}";
                             }
                         }
                     }
@@ -182,7 +182,8 @@ namespace NetSuiteIntegration.Services
                 _httpClient.BaseAddress = new Uri(_Settings.NetSuiteURL ?? "");
 
 
-                string? objectURL = $"record/v1/{objectType}{searchParameters}";
+                string? objectURL = $"record/v1/{objectType}{searchParamsString}";
+                _Log.Information($"Searching for {objectType} with URL: {objectURL}");
                 HttpResponseMessage response = await _httpClient.GetAsync(objectURL);
 
                 if (response.StatusCode == HttpStatusCode.NoContent)

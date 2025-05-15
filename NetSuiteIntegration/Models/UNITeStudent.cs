@@ -15,6 +15,7 @@ namespace NetSuiteIntegration.Models
         [Column(TypeName = "decimal(16,0)")]
         public decimal? StudentID { get; set; }
         public string? StudentRef { get; set; }
+        public string? ExternalRef { get; set; }
         public string? ERPID { get; set; }
         public string? Surname { get; set; }
         public string? Forename { get; set; }

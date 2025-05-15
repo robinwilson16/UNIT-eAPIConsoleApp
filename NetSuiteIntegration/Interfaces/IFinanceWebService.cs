@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using NetSuiteIntegration.Models;
 
 namespace NetSuiteIntegration.Interfaces
 {
@@ -26,6 +27,15 @@ namespace NetSuiteIntegration.Interfaces
         /// <param name="objectType">The type of object to be returned</param>
         /// <returns>A set of records of the specified type, else null</returns>
         Task<T?> GetAll<T>(string? objectType);
+
+        /// <summary>
+        /// Gets a set of records from NetSuite by their Type and returns the search list which is not the full list of items and only the ID
+        /// </summary>
+        /// <typeparam name="T">A custom data model representing the expected return structure</typeparam>
+        /// <param name="objectType">The type of object to be returned</param>
+        /// <param name="searchParameters">The list of search parameters for filtering the resultset</param>
+        /// <returns>A set of records of the specified type, else null</returns>
+        Task<T?> Search<T>(string? objectType, IList<NetSuiteSearchParameter> searchParameters);
 
         /// <summary>
         /// Adds a record to NetSuite by its Type and returns the newly added object
