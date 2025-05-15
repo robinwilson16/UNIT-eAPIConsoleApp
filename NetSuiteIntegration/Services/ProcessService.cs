@@ -125,7 +125,7 @@ namespace NetSuiteIntegration.Services
                         IList<NetSuiteSearchParameter> searchParameters = new List<NetSuiteSearchParameter>();
                         NetSuiteSearchParameter param = (new NetSuiteSearchParameter {
                             Operand = null,
-                            FieldName = "CustentityclientStudentno",
+                            FieldName = "custentityclient_studentno",
                             Operator = Operator.IS,
                             Value = netSuiteCustomer?.CustentityclientStudentno,
                             IncludeOpeningParenthesis = false,
