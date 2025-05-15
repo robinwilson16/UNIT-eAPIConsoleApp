@@ -123,7 +123,8 @@ namespace NetSuiteIntegration.Services
 
                         //Check if the customer already exists in NetSuite by their 
                         IList<NetSuiteSearchParameter> searchParameters = new List<NetSuiteSearchParameter>();
-                        NetSuiteSearchParameter param = (new NetSuiteSearchParameter {
+                        NetSuiteSearchParameter param = (new NetSuiteSearchParameter
+                        {
                             Operand = null,
                             FieldName = "custentityclient_studentno",
                             Operator = Operator.IS,
@@ -136,13 +137,15 @@ namespace NetSuiteIntegration.Services
 
                         NetSuiteCustomerList? customerList = await _netsuite.Search<NetSuiteCustomerList>("customer", searchParameters);
 
-                        if (rowNumber > 1)
+                        _log?.Information($"\nNumber of NetSuite Matches: {customerList?.Count} found where ID of first record is {customerList?.Items?.FirstOrDefault()?.ID}");
+
+                        if (rowNumber > 0)
                             break;
                     }
                 }
 
-                //NetSuiteCustomer? netSuiteCustomer = await _netsuite.Get<NetSuiteCustomer>("customer", 111005);
-                //_log?.Information($"\nNetSuite Customer: {netSuiteCustomer?.EntityID} - {netSuiteCustomer?.FirstName} {netSuiteCustomer?.LastName}");
+                //NetSuiteCustomer? existingNetSuiteCustomer = await _netsuite.Get<NetSuiteCustomer>("customer", 5753);
+                //_log?.Information($"\nNetSuite Customer: {existingNetSuiteCustomer?.EntityID} - {existingNetSuiteCustomer?.FirstName} {existingNetSuiteCustomer?.LastName}");
 
 
 

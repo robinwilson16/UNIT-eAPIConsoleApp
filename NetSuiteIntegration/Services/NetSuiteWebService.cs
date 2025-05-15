@@ -140,7 +140,7 @@ namespace NetSuiteIntegration.Services
                             }
                             else
                             {
-                                joiningCharacter = $" {param?.Operand} ";
+                                joiningCharacter = $"%20{param?.Operand}%20";
                             }
 
                             //The search parameters can contain opening and closing parenthesis to group the search parameters
@@ -162,11 +162,11 @@ namespace NetSuiteIntegration.Services
 
                             if (param?.Value != null)
                             {
-                                searchParamsString += $"{joiningCharacter}{queryPrefix}{param?.FieldName} {param?.Operator} {param?.Value}{querySuffix}";
+                                searchParamsString += $"{joiningCharacter}{queryPrefix}{param?.FieldName}%20{param?.Operator}%20{param?.Value}{querySuffix}";
                             }
                             else
                             {
-                                searchParamsString += $"{joiningCharacter}{queryPrefix}{param?.FieldName} {param?.Operator}{querySuffix}";
+                                searchParamsString += $"{joiningCharacter}{queryPrefix}{param?.FieldName}%20{param?.Operator}{querySuffix}";
                             }
                         }
                     }

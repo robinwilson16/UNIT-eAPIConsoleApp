@@ -15,7 +15,7 @@ namespace NetSuiteIntegration.Services
         public static string GenerateOAuth1Header(string url, string method, ApplicationSettings appSettings)
         {
             //Used for debugging where it will write out the OAuth parameters and signature base string to the console
-            bool? debug = false;
+            bool? debug = true;
 
             string consumerKey = appSettings.NetSuiteConsumerKey ?? "";
             string consumerSecret = appSettings.NetSuiteConsumerSecret ?? "";
@@ -26,7 +26,13 @@ namespace NetSuiteIntegration.Services
             string nonce = Guid.NewGuid().ToString("N");
             string timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
 
-            var parameters = new SortedDictionary<string, string>
+            //Extract URL parameters from the URL
+            string urlParamsString = url.LastIndexOf("?") > 0 ? url.Substring(url.LastIndexOf("?") + 1) : "";
+            string[] urlParams = urlParamsString.Split("&");
+
+            string urlWithoutParams = url.Substring(0, url.LastIndexOf("?") > 0 ? url.LastIndexOf("?") : url.Length);
+
+            SortedDictionary<string, string> oauthParams = new SortedDictionary<string, string>
             {
                 { "oauth_consumer_key", consumerKey },
                 { "oauth_token", token },
@@ -36,12 +42,54 @@ namespace NetSuiteIntegration.Services
                 { "oauth_version", "1.0" }
             };
 
-            string parameterString = string.Join("&", parameters.Select(kvp => $"{URLEncodeUppercase(kvp.Key)}={URLEncodeUppercase(kvp.Value)}"));
+            List<KeyValuePair<string, string>> allParams = new List<KeyValuePair<string, string>>(
+                oauthParams.Select(kvp => new KeyValuePair<string, string>(kvp.Key, kvp.Value))
+            );
+
+            //Add URL parameters to the oauthParams dictionary
+            if (!string.IsNullOrEmpty(urlParamsString))
+            {
+                var queryParams = HttpUtility.ParseQueryString(urlParamsString);
+                if (queryParams != null)
+                {
+                    foreach (string key in queryParams)
+                    {
+                        if (key != null)
+                        {
+                            allParams.Add(new KeyValuePair<string, string>(key, queryParams[key]));
+                        }
+                    }
+                }
+            }
+
+            // Sort parameters by key and value
+            var sortedParams = allParams
+                .OrderBy(p => p.Key)
+                .ThenBy(p => p.Value)
+                .ToList();
 
             if (debug == true)
-                Console.WriteLine($"\nNetSuite OAuth Parameters: {parameterString}");
+            {
+                Console.WriteLine($"\nFull URL: {url}");
+                Console.WriteLine($"\nURL Without Params: {urlWithoutParams}");
+                Console.WriteLine($"\nConsumer/Client Key: {consumerKey}");
+                Console.WriteLine($"Consumer/Client Secret: {consumerSecret}");
+                Console.WriteLine($"Consumer/Token: {token}");
+                Console.WriteLine($"Consumer/Token Secret: {tokenSecret}");
+                Console.WriteLine($"Timestamp: {timestamp}");
+                Console.WriteLine($"Nonce: {nonce}");
+                Console.WriteLine($"Query Params: {urlParamsString}");
+            }
 
-            string signatureBaseString = $"{method.ToUpper()}&{URLEncodeUppercase(url)}&{URLEncodeUppercase(parameterString)}";
+
+            string oauthParamsString = string.Join("&", sortedParams.Select(kvp =>
+                $"{URLEncodeUppercase(kvp.Key)}={URLEncodeUppercase(kvp.Value)}"
+            ));
+
+            if (debug == true)
+                Console.WriteLine($"\nNetSuite OAuth Parameters: {oauthParamsString}");
+
+            string signatureBaseString = $"{method.ToUpper()}&{URLEncodeUppercase(urlWithoutParams)}&{URLEncodeUppercase(oauthParamsString)}";
 
             if (debug == true)
                 Console.WriteLine($"\nNetSuite Signature Base String: {signatureBaseString}");
@@ -50,10 +98,13 @@ namespace NetSuiteIntegration.Services
             using var hasher = new HMACSHA256(Encoding.UTF8.GetBytes(signingKey));
             string signature = Convert.ToBase64String(hasher.ComputeHash(Encoding.UTF8.GetBytes(signatureBaseString)));
 
-            parameters.Add("realm", realm); // Needs to not be part of the signature so is added after
-            parameters.Add("oauth_signature", signature);
+            if (debug == true)
+                Console.WriteLine($"\nNetSuite OAuth Signature: {signature}");
 
-            string authHeader = "OAuth " + string.Join(", ", parameters.Select(kvp => $"{kvp.Key}=\"{URLEncodeUppercase(kvp.Value)}\""));
+            oauthParams.Add("realm", realm); // Needs to not be part of the signature so is added after
+            oauthParams.Add("oauth_signature", signature);
+
+            string authHeader = "OAuth " + string.Join(", ", oauthParams.Select(kvp => $"{kvp.Key}=\"{URLEncodeUppercase(kvp.Value)}\""));
 
             if (debug == true)
                 Console.WriteLine($"\nNetSuite Authorisation Header: {authHeader}");
