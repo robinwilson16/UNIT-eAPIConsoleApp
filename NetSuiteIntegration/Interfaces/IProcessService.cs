@@ -8,5 +8,6 @@ namespace NetSuiteIntegration.Interfaces
 {
     public interface IProcessService
     {
+        Task<bool> Process(string? repgen);
     }
 }

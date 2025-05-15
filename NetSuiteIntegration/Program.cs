@@ -112,76 +112,11 @@ namespace NetSuiteIntegration
 
             #region Main Logic and Process
             log.Information("Start");
-            //await process.DoSomething();
 
-            
-            UniteWebService uniteWebService = new UniteWebService(log, appSettings);
-            NetSuiteWebService netSuiteWebService = new NetSuiteWebService(log, appSettings);
+            //Run main process
+            await process!.Process(UNITeRepGenReportReference);
 
-            //Get Access Token - not used now as ExportReport function handles this
-            //Console.WriteLine($"\nObtaining Access Token from {appSettings?.UniteTokenURL} for UNIT-e API using API Key {appSettings?.UniteAPIKey}");
-            //UNITeAPIToken = await uniteWebService.GetGuid();
 
-            //if (!string.IsNullOrEmpty(UNITeAPIToken))
-            //    UNITeSessionIsValid = true;
-            //else
-            //    UNITeSessionIsValid = false;
-
-            //if (UNITeSessionIsValid == true)
-            //    Console.WriteLine($"\nObtained Access Token: {UNITeAPIToken}");
-            //else
-            //    Console.WriteLine($"\nError: Could not obtain access token from UNIT-e API. Check API Key and URL are correct");
-
-            List<UNITeEnrolment>? uniteEnrolments = await uniteWebService.ExportReport<List<UNITeEnrolment>>(UNITeRepGenReportReference ?? "");
-
-            if (uniteEnrolments != null)
-            {
-                foreach (UNITeEnrolment? uniteEnrolment in uniteEnrolments)
-                {
-                    Console.WriteLine($"\nUNIT-e Enrolment: {uniteEnrolment?.StudentRef} - {uniteEnrolment?.Surname} {uniteEnrolment?.Forename}");
-                }
-            }
-
-            //NetSuite HTTP Client
-            HttpClient httpClientNetSuite = new HttpClient(new OAuth1Handler(appSettings))
-            {
-                BaseAddress = new Uri(appSettings.NetSuiteURL ?? "")
-            };
-
-            NetSuiteCustomer? netSuiteCustomer = await netSuiteWebService.Get<NetSuiteCustomer>("customer", 111005);
-            Console.WriteLine($"\nNetSuite Customer: {netSuiteCustomer?.EntityID} - {netSuiteCustomer?.FirstName} {netSuiteCustomer?.LastName}");
-
-            //if (netSuiteCustomer != null)
-            //{
-            //    //Was Nilsson
-            //    netSuiteCustomer.FirstName = "RobinTest";
-            //    netSuiteCustomer.LastName = "WilsonTest";
-
-            //    //If adding clear out IDs
-            //    netSuiteCustomer.ID = null;
-            //    netSuiteCustomer.ExternalID = "999999";
-            //    netSuiteCustomer.EntityID = "999999";
-            //}
-
-            //Update a record
-            //NetSuiteCustomer? updatedNetSuiteCustomer = await netSuiteWebService.Update<NetSuiteCustomer>("customer", 5753, netSuiteCustomer);
-
-            //Insert a record
-            //NetSuiteCustomer? insertedNetSuiteCustomer = await netSuiteWebService.Add<NetSuiteCustomer>("customer", netSuiteCustomer);
-
-            //Delete a record
-            //bool? isDeleted = await netSuiteWebService.Delete<NetSuiteCustomer>("customer", 111005);
-
-            //List all records
-            NetSuiteCustomerList? netSuiteCustomerList = await netSuiteWebService.GetAll<NetSuiteCustomerList>("customer");
-
-            if (netSuiteCustomerList != null && netSuiteCustomerList?.Items?.Count > 0)
-            {
-                foreach (NetSuiteCustomerListItem? customer in netSuiteCustomerList!.Items)
-                {
-                    Console.WriteLine($"\nNetSuite Customer: {customer?.ID}");
-                }
-            }
             #endregion
 
             ////Not used - code for finding lists of students

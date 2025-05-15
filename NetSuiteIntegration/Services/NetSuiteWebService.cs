@@ -109,6 +109,8 @@ namespace NetSuiteIntegration.Services
             //Use parenthesis to group the search parameters -- TODO
 
             T? reportData = default;
+            int? numOpeningParenthesis = 0;
+            int? numClosingParenthesis = 0;
 
             try
             {
@@ -128,6 +130,8 @@ namespace NetSuiteIntegration.Services
                         if (param?.FieldName != null && param?.Operator != null)
                         {
                             paramNum++;
+
+                            //If first parameter then add ?q= to the start of the search string otherwise add the operand (AND/OR)
                             string? joiningCharacter = "";
 
                             if (paramNum == 1)
@@ -139,16 +143,39 @@ namespace NetSuiteIntegration.Services
                                 joiningCharacter = $" {param?.Operand} ";
                             }
 
+                            //The search parameters can contain opening and closing parenthesis to group the search parameters
+                            //The number of opening and closing parenthesis must match otherwise the search will fail (below)
+                            string? prefix = string.Empty;
+                            string? suffix = string.Empty;
+
+                            if (param?.IncludeOpeningParenthesis == true)
+                            {
+                                prefix = "(";
+                                numOpeningParenthesis++;
+                            }
+
+                            if (param?.IncludeClosingParenthesis == true)
+                            {
+                                suffix = ")";
+                                numClosingParenthesis++;
+                            }
+
                             if (param?.Value != null)
                             {
-                                searchParams += $"{joiningCharacter}{param?.FieldName} {param?.Operator} {param?.Value}";
+                                searchParams += $"{joiningCharacter}{prefix}{param?.FieldName} {param?.Operator} {param?.Value}{suffix}";
                             }
                             else
                             {
-                                searchParams += $"{joiningCharacter}{param?.FieldName} {param?.Operator}";
+                                searchParams += $"{joiningCharacter}{prefix}{param?.FieldName} {param?.Operator}{suffix}";
                             }
                         }
                     }
+                }
+
+                if (numOpeningParenthesis != numClosingParenthesis)
+                {
+                    _Log.Error($"The search parameters for {objectType} are not valid. The number of opening and closing parenthesis do not match");
+                    return default(T);
                 }
 
                 HttpClient _httpClient = new HttpClient(new OAuth1Handler(_Settings));
