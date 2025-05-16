@@ -1,19 +1,17 @@
 ﻿using NetSuiteIntegration.Interfaces;
 using NetSuiteIntegration.Models;
-using Newtonsoft.Json;
 using Serilog;
 using System.Data;
 using System.Text;
 using System.Web;
-using Formatting = Newtonsoft.Json.Formatting;
 
 namespace NetSuiteIntegration.Services
 {
-    public class UniteWebServiceOld(ILogger log, ApplicationSettings applicationSettings) : ISRSWebServicecs
+    public class UniteWebServiceOld(ILogger log, ApplicationSettings applicationSettings)
     {
         ApplicationSettings _Settings = applicationSettings;
         ILogger _Log = log;
-
+        /*
         #region Utility Methods
 
         /// <inheritdoc />
@@ -440,5 +438,6 @@ namespace NetSuiteIntegration.Services
         }
 
         #endregion
+        */
     }
 }

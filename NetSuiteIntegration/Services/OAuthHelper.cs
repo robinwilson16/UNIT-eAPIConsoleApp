@@ -15,7 +15,7 @@ namespace NetSuiteIntegration.Services
         public static string GenerateOAuth1Header(string url, string method, ApplicationSettings appSettings)
         {
             //Used for debugging where it will write out the OAuth parameters and signature base string to the console
-            bool? debug = true;
+            bool? debug = false;
 
             string consumerKey = appSettings.NetSuiteConsumerKey ?? "";
             string consumerSecret = appSettings.NetSuiteConsumerSecret ?? "";

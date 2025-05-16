@@ -1,5 +1,6 @@
 ﻿using NetSuiteIntegration.Interfaces;
 using NetSuiteIntegration.Models;
+using NetSuiteIntegration.Shared;
 using Serilog;
 using System;
 using System.Collections.Generic;
@@ -108,6 +109,8 @@ namespace NetSuiteIntegration.Services
             //?q=creditlimit GREATER_OR_EQUAL 1000 OR creditlimit LESS_OR_EQUAL 10
             //Use parenthesis to group the search parameters -- TODO
 
+            bool debug = false;
+
             T? reportData = default;
             int? numOpeningParenthesis = 0;
             int? numClosingParenthesis = 0;
@@ -140,13 +143,21 @@ namespace NetSuiteIntegration.Services
                             }
                             else
                             {
-                                joiningCharacter = $"%20{param?.Operand}%20";
+                                //If operand not specified then default to AND
+                                if (param?.Operand == null)
+                                {
+                                    param!.Operand = Operand.AND;
+                                }
+                                joiningCharacter = $" {param?.Operand} ";
                             }
 
                             //The search parameters can contain opening and closing parenthesis to group the search parameters
                             //The number of opening and closing parenthesis must match otherwise the search will fail (below)
                             string? queryPrefix = string.Empty;
                             string? querySuffix = string.Empty;
+
+                            string? valuePrefix = string.Empty;
+                            string? valueSuffix = string.Empty;
 
                             if (param?.IncludeOpeningParenthesis == true)
                             {
@@ -160,13 +171,22 @@ namespace NetSuiteIntegration.Services
                                 numClosingParenthesis++;
                             }
 
+                            //If value is a string then need to add quotes around it so characters such as @ in email do not cause an error
+                            string? operatorDisplayName = param?.Operator?.GetEnumDisplayName();
+
+                            if (operatorDisplayName?.Contains("Text") == true)
+                            {
+                                valuePrefix = "\"";
+                                valueSuffix = "\"";
+                            }
+
                             if (param?.Value != null)
                             {
-                                searchParamsString += $"{joiningCharacter}{queryPrefix}{param?.FieldName}%20{param?.Operator}%20{param?.Value}{querySuffix}";
+                                searchParamsString += $"{joiningCharacter}{queryPrefix}{param?.FieldName} {param?.Operator} {valuePrefix}{param?.Value}{valueSuffix}{querySuffix}";
                             }
                             else
                             {
-                                searchParamsString += $"{joiningCharacter}{queryPrefix}{param?.FieldName}%20{param?.Operator}{querySuffix}";
+                                searchParamsString += $"{joiningCharacter}{queryPrefix}{param?.FieldName} {param?.Operator}{querySuffix}";
                             }
                         }
                     }
@@ -183,7 +203,12 @@ namespace NetSuiteIntegration.Services
 
 
                 string? objectURL = $"record/v1/{objectType}{searchParamsString}";
-                _Log.Information($"Searching for {objectType} with URL: {objectURL}");
+
+                if (debug == true)
+                {
+                    _Log.Information($"Searching for {objectType} with URL: {objectURL}");
+                }
+
                 HttpResponseMessage response = await _httpClient.GetAsync(objectURL);
 
                 if (response.StatusCode == HttpStatusCode.NoContent)

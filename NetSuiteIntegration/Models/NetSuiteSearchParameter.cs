@@ -11,7 +11,7 @@ namespace NetSuiteIntegration.Models
     [Keyless]
     public class NetSuiteSearchParameter
     {
-        public Operator? Operand { get; set; }
+        public Operand? Operand { get; set; }
         public string? FieldName { get; set; }
         public Operator? Operator { get; set; }
         public string? Value { get; set; }
@@ -69,7 +69,7 @@ namespace NetSuiteIntegration.Models
         START_WITH,
         [Display(Name = "Text: START_WITH_NOT")]
         START_WITH_NOT,
-        [Display(Name = "Text: END_WITH")]
+        [Display(Name = "Text: END_WITH")] //Doesn't seem to work even though in documentation and START_WITH works. Use CONTAINS instead
         END_WITH,
         [Display(Name = "Text: END_WITH_NOT")]
         END_WITH_NOT,

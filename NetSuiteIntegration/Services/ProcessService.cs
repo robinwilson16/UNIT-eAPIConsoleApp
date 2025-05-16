@@ -14,10 +14,15 @@ namespace NetSuiteIntegration.Services
 
         public async Task<bool> Process(string? _enrolmentRepGen)
         {
+            bool? ReadOnly = false;
+            bool? FirstRecordOnly = true;
+
             //Steps
             //1. Get UNIT-e Enrolments in Scope
             //2. Map to Distinct UNIT-e Students
-            //3. Map to NetSuite Customers
+            //3. Map to NetSuite Customers by Student Ref
+            //3a. Map to NetSuite Customers by ERP No if Ref not found
+            //3b. Map to NetSuite Customers by Name/Email/Mobile if Ref and ERP not found
 
             // Check all parameters have values
             if (_log == null)
@@ -58,8 +63,6 @@ namespace NetSuiteIntegration.Services
 
                 uniteEnrolments = await _unite.ExportReport<List<UNITeEnrolment>>(_enrolmentRepGen ?? "");
 
-
-                _log?.Information("\nLoading UNIT-e Enrolments after...");
                 if (uniteEnrolments == null)
                 {
                     _log?.Information("No UNIT-e Enrolments found.");
@@ -104,11 +107,12 @@ namespace NetSuiteIntegration.Services
                     //Map UNIT-e Students to NetSuite Customers
                     netSuiteCustomers = uniteStudents?.Select(cus => new NetSuiteCustomer
                     {
-                        CustentityclientStudentno = cus.StudentRef,
-                        ExternalID = cus.ERPID,
+                        CustEntityClientStudentNo = cus.StudentRef,
+                        CustEntityCRMApplicantID = cus.ERPID,
                         LastName = cus.Surname,
                         FirstName = cus.Forename,
                         Email = cus.EmailAddress,
+                        Phone = cus.Mobile,
                         IsPerson = true,
                         IsInactive = false,
                         DepositBalance = Convert.ToDouble(cus.FeeGross, CultureInfo.InvariantCulture)
@@ -119,27 +123,75 @@ namespace NetSuiteIntegration.Services
                     foreach (NetSuiteCustomer? netSuiteCustomer in netSuiteCustomers!)
                     {
                         rowNumber++;
-                        _log?.Information($"\nRecord {rowNumber} of {netSuiteCustomers.Count}: Checking {netSuiteCustomer?.LastName}, {netSuiteCustomer?.FirstName} ({netSuiteCustomer?.CustentityclientStudentno})");
-
-                        //Check if the customer already exists in NetSuite by their 
+                        _log?.Information($"\nRecord {rowNumber} of {netSuiteCustomers.Count}: Searching for {netSuiteCustomer?.LastName}, {netSuiteCustomer?.FirstName} ({netSuiteCustomer?.CustEntityClientStudentNo}) in NetSuite");
+                        NetSuiteCustomer? matchedCustomer = new NetSuiteCustomer();
                         IList<NetSuiteSearchParameter> searchParameters = new List<NetSuiteSearchParameter>();
-                        NetSuiteSearchParameter param = (new NetSuiteSearchParameter
+                        NetSuiteSearchParameter param = new NetSuiteSearchParameter();
+                        NetSuiteCustomerList? searchResults = new NetSuiteCustomerList();
+
+                        //Check if the customer already exists in NetSuite by their Student Ref
+                        if (matchedCustomer?.ID == null)
                         {
-                            Operand = null,
-                            FieldName = "custentityclient_studentno",
-                            Operator = Operator.IS,
-                            Value = netSuiteCustomer?.CustentityclientStudentno,
-                            IncludeOpeningParenthesis = false,
-                            IncludeClosingParenthesis = false
-                        });
+                            searchParameters = new List<NetSuiteSearchParameter>();
 
-                        searchParameters.Add(param);
+                            param = AddSearchParameter(null, "custentityclient_studentno", Operator.IS, netSuiteCustomer?.CustEntityClientStudentNo);
+                            searchParameters.Add(param);
 
-                        NetSuiteCustomerList? customerList = await _netsuite.Search<NetSuiteCustomerList>("customer", searchParameters);
+                            matchedCustomer = await FindCustomer(searchParameters, RecordMatchType.ByStudentRef);
 
-                        _log?.Information($"\nNumber of NetSuite Matches: {customerList?.Count} found where ID of first record is {customerList?.Items?.FirstOrDefault()?.ID}");
+                            if (matchedCustomer?.ID != null)
+                            {
+                                _log?.Information($"Customer Found in NetSuite by Student Ref with NetSuite Customer ID: {matchedCustomer?.ID}");
+                            }
+                        }
 
-                        if (rowNumber > 0)
+                        //If unsuccessful check if the customer already exists in NetSuite by their ERP ID
+                        if (matchedCustomer?.ID == null)
+                        {
+                            searchParameters = new List<NetSuiteSearchParameter>();
+
+                            param = AddSearchParameter(null, "custentity_crm_applicantid", Operator.IS, netSuiteCustomer?.CustEntityCRMApplicantID);
+                            searchParameters.Add(param);
+
+                            matchedCustomer = await FindCustomer(searchParameters, RecordMatchType.ByERPID);
+
+                            if (matchedCustomer?.ID != null)
+                            {
+                                _log?.Information($"Customer Found in NetSuite by ERP ID with NetSuite Customer ID: {matchedCustomer?.ID}");
+                            }
+                        }
+
+                        //If unsuccessful then attempt to match on name/email/mobile if all have values
+                        if (matchedCustomer?.ID == null && !(string.IsNullOrEmpty(netSuiteCustomer?.FirstName) || string.IsNullOrEmpty(netSuiteCustomer?.LastName) || string.IsNullOrEmpty(netSuiteCustomer?.Email) || string.IsNullOrEmpty(netSuiteCustomer?.Phone)))
+                        {
+                            searchParameters = new List<NetSuiteSearchParameter>();
+
+                            param = AddSearchParameter(null, "firstName", Operator.IS, netSuiteCustomer?.FirstName);
+                            searchParameters.Add(param);
+
+                            param = AddSearchParameter(Operand.AND, "lastName", Operator.IS, netSuiteCustomer?.LastName);
+                            searchParameters.Add(param);
+
+                            param = AddSearchParameter(Operand.AND, "email", Operator.IS, netSuiteCustomer?.Email);
+                            searchParameters.Add(param);
+
+                            param = AddSearchParameter(Operand.AND, "phone", Operator.IS, netSuiteCustomer?.Phone);
+                            searchParameters.Add(param);
+
+                            matchedCustomer = await FindCustomer(searchParameters, RecordMatchType.ByPersonalDetails);
+
+                            if (matchedCustomer?.ID != null)
+                            {
+                                _log?.Information($"Customer Found in NetSuite by Name/Email/Phone with NetSuite Customer ID: {matchedCustomer?.ID}");
+                            }
+                        }
+
+                        if (matchedCustomer?.ID == null)
+                        {
+                            _log?.Information($"Customer Not Found in NetSuite");
+                        }
+
+                        if (FirstRecordOnly == true)
                             break;
                     }
                 }
@@ -190,6 +242,56 @@ namespace NetSuiteIntegration.Services
                 _log?.Error($"Error in Process: {ex.Message}");
                 return false;
             }
+        }
+
+        public NetSuiteSearchParameter AddSearchParameter(Operand? operand, string? fieldName, Operator? op, string? value)
+        {
+            NetSuiteSearchParameter param = new NetSuiteSearchParameter
+            {
+                Operand = null,
+                FieldName = fieldName,
+                Operator = op,
+                Value = value,
+                IncludeOpeningParenthesis = false,
+                IncludeClosingParenthesis = false
+            };
+            return param;
+        }
+
+        public NetSuiteSearchParameter AddSearchParameter(Operand? operand, string? fieldName, Operator? op, string? value, bool? IncludeOpeningParenthesis, bool? IncludeClosingParenthesis)
+        {
+            NetSuiteSearchParameter param = new NetSuiteSearchParameter
+            {
+                Operand = null,
+                FieldName = fieldName,
+                Operator = op,
+                Value = value,
+                IncludeOpeningParenthesis = false,
+                IncludeClosingParenthesis = false
+            };
+            return param;
+        }
+
+        public async Task<NetSuiteCustomer> FindCustomer(IList<NetSuiteSearchParameter>? searchParameters, RecordMatchType recordMatchType)
+        {
+            NetSuiteCustomerList? searchResults = new NetSuiteCustomerList();
+            NetSuiteCustomer? matchedCustomer = new NetSuiteCustomer();
+
+            //Perform the search
+            searchResults = await _netsuite?.Search<NetSuiteCustomerList>("customer", searchParameters);
+
+            if (searchResults?.Count > 0)
+            {
+                //Get record details if it matches as should only ever be one match here
+                matchedCustomer = await _netsuite.Get<NetSuiteCustomer>("customer", int.Parse(searchResults?.Items?.FirstOrDefault()?.ID ?? "0"));
+            }
+
+            if (matchedCustomer != null)
+            {
+                matchedCustomer.RecordMatchType = recordMatchType;
+            }
+
+            return matchedCustomer ?? new NetSuiteCustomer();
         }
     }
 }

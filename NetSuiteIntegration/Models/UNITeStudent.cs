@@ -114,5 +114,6 @@ namespace NetSuiteIntegration.Models
         [Column(TypeName = "decimal(19,4)")]
         [DataType(DataType.Currency)]
         public decimal? FeeGross { get; set; }
+        public int? NetSuiteCustomerID { get; set; }
     }
 }

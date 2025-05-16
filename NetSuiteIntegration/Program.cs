@@ -14,7 +14,6 @@ using UNITe.Business.Helper;
 using System.Security.Cryptography;
 using System.Text;
 using System.Web;
-using Newtonsoft.Json.Linq;
 using System.Text.Json;
 using System.Reflection.Metadata;
 
@@ -73,7 +72,7 @@ namespace NetSuiteIntegration
             .AddSingleton<ApplicationSettings>()
             .AddSingleton<ILogger>(log)
             .AddSingleton<IProcessService, ProcessService>()
-            .AddSingleton<ISRSWebServicecs, UniteWebServiceOld>()
+            .AddSingleton<ISRSWebServicecs, UniteWebService>()
             .AddSingleton<IFinanceWebService, NetSuiteWebService>()
             .AddDbContextFactory<NetsuiteContext>() //Configurtion and datamart source
             .AddSingleton<IMapper>(mapper)

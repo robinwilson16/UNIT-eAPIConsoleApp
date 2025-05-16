@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,17 +18,34 @@ namespace NetSuiteIntegration.Models
         public NetSuiteCustomerCreditHoldOverride? CreditHoldOverride { get; set; }
         public NetSuiteCustomerCurrency? Currency { get; set; }
         //public NetSuiteCustomerCurrencyList? CurrencyList { get; set; } // Commented out as otherwise errors in PATCH request
-        public bool? Custentity2663CustomerRefund { get; set; }
-        public bool? Custentity2663DirectDebit { get; set; }
-        public string? CustentityEscLastModifiedDate { get; set; }
-        public bool? CustentityNawTransNeedApproval { get; set; }
-        public string? CustentitySapMfsBpCc { get; set; }
-        public string? CustentityclientStudentno { get; set; }
-        public string? CustentitysapMflBpCc { get; set; }
+        [JsonPropertyName("custentity_2663_customer_refund")]
+        public bool? CustEntity2663CustomerRefund { get; set; }
+        [JsonPropertyName("custentity_2663_direct_debit")]
+        public bool? CustEntity2663DirectDebit { get; set; }
+        [JsonPropertyName("custentity_crm_applicantid")]
+        public string? CustEntityCRMApplicantID { get; set; } //ERP ID
+        [JsonPropertyName("custentity_esc_last_modified_date")]
+        public string? CustEntityEscLastModifiedDate { get; set; }
+        [JsonPropertyName("custentity_f3_campus")]
+        public NetSuiteCustomerCustEntityF3Campus? CustEntityF3Campus { get; set; }
+        [JsonPropertyName("custentity_f3_student_status")]
+        public NetSuiteCustomerCustEntityF3StudentStatus? CustEntityF3StudentStatus { get; set; }
+        [JsonPropertyName("custentity_naw_trans_need_approval")]
+        public bool? CustEntityNawTransNeedApproval { get; set; }
+        [JsonPropertyName("custentity_payment_method")]
+        public NetSuiteCustomerCustEntityPaymentMethod? CustEntityPaymentMethod { get; set; }
+        [JsonPropertyName("custentity_sap_mfs_bp_cc")]
+        public string? CustEntitySapMfsBpCc { get; set; }
+        [JsonPropertyName("custentity_sap_mfl_bp_cc")]
+        public string? CustEntitysapMflBpCc { get; set; }
+        [JsonPropertyName("custentityclient_studentno")]
+        public string? CustEntityClientStudentNo { get; set; } //UNIT-e Student Ref
         public NetSuiteCustomerCustomForm? CustomForm { get; set; }
         public DateTime? DateCreated { get; set; }
+        public int? DaysOverdue { get; set; }
         public string? DefaultAddress { get; set; }
         public double? DepositBalance { get; set; }
+        public NetSuiteCustomerDRAccount? DRAccount { get; set; }
         public string? Email { get; set; }
         public NetSuiteCustomerEmailPreference? EmailPreference { get; set; }
         public bool? EmailTransactions { get; set; }
@@ -50,7 +68,48 @@ namespace NetSuiteIntegration.Models
         public DateTime? LastModifiedDate { get; set; }
         public string? LastName { get; set; }
         public string? MiddleName { get; set; }
+        public string? MobilePhoneWithCode
+        {
+            get
+            {
+                string? mobilePhone = 
+                    Phone?.StartsWith("+") == true 
+                    && Phone?.Length == 13 
+                    && Phone.Contains(" ") == false
+                    ? Phone 
+                    : Phone?.StartsWith("07") == true
+                    && Phone?.Length == 11
+                    && Phone.Contains(" ") == false
+                    ? $"+44{Phone.Substring(2, 10)}"
+                    : Phone?.StartsWith("7") == true
+                    && Phone?.Length == 10
+                    && Phone.Contains(" ") == false
+                    ? $"+44{Phone}"
+                    : null;
+                return mobilePhone;
+            }
+        }
+        public string? MobilePhone
+        {
+            get
+            {
+                string? mobilePhone = Phone?.Substring(Phone.Length - 10).PadLeft(11, '0');
+                if (mobilePhone != null && mobilePhone.StartsWith("07") == true)
+                    return mobilePhone;
+                else
+                    return null;
+            }
+        }
         public double? OverdueBalance { get; set; }
+        public string? Phone { get; set; }
+        public string? PhoneLast10Chars
+        {
+            get
+            {
+                string? phone = Phone?.Substring(Phone.Length - 10);
+                return phone;
+            }
+        }
         public bool? PrintTransactions { get; set; }
         public NetSuiteCustomerReceivablesAccount? ReceivablesAccount { get; set; }
         //public NetSuiteCustomerSalesTeam? SalesTeam { get; set; } // Commented out as otherwise errors in PATCH request
@@ -60,5 +119,16 @@ namespace NetSuiteIntegration.Models
         public bool? SyncSalesTeams { get; set; }
         public double? UnbilledOrders { get; set; }
         public bool? Unsubscribe { get; set; }
+
+        //Extra fields
+        public RecordMatchType? RecordMatchType { get; set; }
+    }
+
+    public enum RecordMatchType
+    {
+        ByStudentRef,
+        ByERPID,
+        ByPersonalDetails,
+        NotFound
     }
 }
