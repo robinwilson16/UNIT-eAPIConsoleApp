@@ -11,6 +11,6 @@ namespace NetSuiteIntegration.Models
     [Keyless]
     public class NetSuiteCustomerAddressBook
     {
-        public ICollection<NetSuiteCustomerLink>? Links { get; set; }
+        public ICollection<NetSuiteLink>? Links { get; set; }
     }
 }

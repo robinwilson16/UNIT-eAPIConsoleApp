@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace NetSuiteIntegration.Models
 {
     [Keyless]
-    public class NetSuiteCustomerListLink
+    public class NetSuiteLink
     {
         public string? Rel { get; set; }
         public string? Href { get; set; }

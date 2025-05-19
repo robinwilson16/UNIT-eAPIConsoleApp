@@ -11,13 +11,15 @@ namespace NetSuiteIntegration.Models
 {
     public class NetSuiteCustomer
     {
-        public ICollection<NetSuiteCustomerLink>? Links { get; set; }
-        //public NetSuiteCustomerAddressBook? AddressBook { get; set; } // Commented out as otherwise errors in PATCH request
+        public ICollection<NetSuiteLink>? Links { get; set; }
+        [JsonIgnore]
+        public NetSuiteCustomerAddressBook? AddressBook { get; set; } //Links to Customer ID
         public NetSuiteCustomerAlcoholRecipientType? AlcoholRecipientType { get; set; }
         public double? Balance { get; set; }
         public NetSuiteCustomerCreditHoldOverride? CreditHoldOverride { get; set; }
         public NetSuiteCustomerCurrency? Currency { get; set; }
-        //public NetSuiteCustomerCurrencyList? CurrencyList { get; set; } // Commented out as otherwise errors in PATCH request
+        [JsonIgnore]
+        public NetSuiteCustomerCurrencyList? CurrencyList { get; set; } //Links to Customer ID
         [JsonPropertyName("custentity_2663_customer_refund")]
         public bool? CustEntity2663CustomerRefund { get; set; }
         [JsonPropertyName("custentity_2663_direct_debit")]
@@ -55,7 +57,8 @@ namespace NetSuiteIntegration.Models
         public bool? FaxTransactions { get; set; }
         public string? FirstName { get; set; }
         public NetSuiteCustomerGlobalSubscriptionStatus? GlobalSubscriptionStatus { get; set; }
-        //public NetSuiteCustomerGroupPricing? GroupPricing { get; set; } // Commented out as otherwise errors in PATCH request
+        [JsonIgnore]
+        public NetSuiteCustomerGroupPricing? GroupPricing { get; set; } //Links to Customer ID
 
         [Key]
         public string? ID { get; set; }
@@ -63,7 +66,8 @@ namespace NetSuiteIntegration.Models
         public bool? IsBudgetApproved { get; set; }
         public bool? IsInactive { get; set; }
         public bool? IsPerson { get; set; }
-        //public NetSuiteCustomerItemPricing? ItemPricing { get; set; } // Commented out as otherwise errors in PATCH request
+        [JsonIgnore]
+        public NetSuiteCustomerItemPricing? ItemPricing { get; set; } //Links to Customer ID
         public NetSuiteCustomerLanguage? Language { get; set; }
         public DateTime? LastModifiedDate { get; set; }
         public string? LastName { get; set; }
@@ -112,7 +116,8 @@ namespace NetSuiteIntegration.Models
         }
         public bool? PrintTransactions { get; set; }
         public NetSuiteCustomerReceivablesAccount? ReceivablesAccount { get; set; }
-        //public NetSuiteCustomerSalesTeam? SalesTeam { get; set; } // Commented out as otherwise errors in PATCH request
+        [JsonIgnore]
+        public NetSuiteCustomerSalesTeam? SalesTeam { get; set; } //Links to Customer ID
         public bool? ShipComplete { get; set; }
         public NetSuiteCustomerShippingCarrier? ShippingCarrier { get; set; }
         public NetSuiteCustomerSubsidiary? Subsidiary { get; set; }
@@ -121,7 +126,12 @@ namespace NetSuiteIntegration.Models
         public bool? Unsubscribe { get; set; }
 
         //Extra fields
+        [JsonIgnore]
         public RecordMatchType? RecordMatchType { get; set; }
+        [JsonIgnore]
+        public RecordActionType? RecordActionType { get; set; }
+        [JsonIgnore]
+        public ICollection<NetSuiteAddressBook>? Addresses { get; set; }
     }
 
     public enum RecordMatchType
@@ -130,5 +140,13 @@ namespace NetSuiteIntegration.Models
         ByERPID,
         ByPersonalDetails,
         NotFound
+    }
+
+    public enum RecordActionType
+    {
+        Insert,
+        Update,
+        Delete,
+        None
     }
 }

@@ -10,6 +10,6 @@ namespace NetSuiteIntegration.Models
     [Keyless]
     public class NetSuiteCustomerCurrencyList
     {
-        public ICollection<NetSuiteCustomerLink>? Links { get; set; }
+        public ICollection<NetSuiteLink>? Links { get; set; }
     }
 }

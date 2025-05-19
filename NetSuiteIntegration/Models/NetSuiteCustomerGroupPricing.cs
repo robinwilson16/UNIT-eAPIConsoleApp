@@ -10,6 +10,6 @@ namespace NetSuiteIntegration.Models
     [Keyless]
     public class NetSuiteCustomerGroupPricing
     {
-        public ICollection<NetSuiteCustomerLink>? Links { get; set; }
+        public ICollection<NetSuiteLink>? Links { get; set; }
     }
 }

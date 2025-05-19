@@ -41,69 +41,267 @@ namespace NetSuiteIntegration.Models
                 return ULN == null ? null : ulnInt;
             }
         }
-        public string? Address { get; set; }
-        public string? Address1
+        public string? AddressMain { get; set; }
+        public string? Address1Main
         {
             get
             {
-                if (Address != null)
+                if (AddressMain != null)
                 {
-                    string[] addressParts = Address.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    string[] addressParts = AddressMain.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
                     return addressParts.Length > 0 ? addressParts[0] : null;
                 }
                 return null;
             }
         }
-        public string? Address2
+        public string? Address2Main
         {
             get
             {
-                if (Address != null)
+                if (AddressMain != null)
                 {
-                    string[] addressParts = Address.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    string[] addressParts = AddressMain.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
                     return addressParts.Length > 1 ? addressParts[1] : null;
                 }
                 return null;
             }
         }
-        public string? Address3
+        public string? Address3Main
         {
             get
             {
-                if (Address != null)
+                if (AddressMain != null)
                 {
-                    string[] addressParts = Address.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    string[] addressParts = AddressMain.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
                     return addressParts.Length > 2 ? addressParts[2] : null;
                 }
                 return null;
             }
         }
-        public string? Address4
+        public string? Address4Main
         {
             get
             {
-                if (Address != null)
+                if (AddressMain != null)
                 {
-                    string[] addressParts = Address.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    string[] addressParts = AddressMain.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
                     return addressParts.Length > 3 ? addressParts[3] : null;
                 }
                 return null;
             }
         }
-        public string? Address5
+        public string? Address5Main
         {
             get
             {
-                if (Address != null)
+                if (AddressMain != null)
                 {
-                    string[] addressParts = Address.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    string[] addressParts = AddressMain.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
                     return addressParts.Length > 4 ? addressParts[4] : null;
                 }
                 return null;
             }
         }
+        public string? CountryCodeMain { get; set; }
+        public string? CountryNameMain { get; set; }
+        public string? AddressMainType { get; set; }
         [MaxLength(8)]
-        public string? PostCode { get; set; }
+        public string? PostCodeMain { get; set; }
+        public string? AddressTermTime { get; set; }
+        public string? Address1TermTime
+        {
+            get
+            {
+                if (AddressTermTime != null)
+                {
+                    string[] addressParts = AddressTermTime.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    return addressParts.Length > 0 ? addressParts[0] : null;
+                }
+                return null;
+            }
+        }
+        public string? Address2TermTime
+        {
+            get
+            {
+                if (AddressTermTime != null)
+                {
+                    string[] addressParts = AddressTermTime.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    return addressParts.Length > 1 ? addressParts[1] : null;
+                }
+                return null;
+            }
+        }
+        public string? Address3TermTime
+        {
+            get
+            {
+                if (AddressTermTime != null)
+                {
+                    string[] addressParts = AddressTermTime.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    return addressParts.Length > 2 ? addressParts[2] : null;
+                }
+                return null;
+            }
+        }
+        public string? Address4TermTime
+        {
+            get
+            {
+                if (AddressTermTime != null)
+                {
+                    string[] addressParts = AddressTermTime.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    return addressParts.Length > 3 ? addressParts[3] : null;
+                }
+                return null;
+            }
+        }
+        public string? Address5TermTime
+        {
+            get
+            {
+                if (AddressTermTime != null)
+                {
+                    string[] addressParts = AddressTermTime.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    return addressParts.Length > 4 ? addressParts[4] : null;
+                }
+                return null;
+            }
+        }
+        public string? CountryCodeTermTime { get; set; }
+        public string? CountryNameTermTime { get; set; }
+        [MaxLength(8)]
+        public string? PostCodeTermTime { get; set; }
+        public string? AddressHome { get; set; }
+        public string? Address1Home
+        {
+            get
+            {
+                if (AddressHome != null)
+                {
+                    string[] addressParts = AddressHome.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    return addressParts.Length > 0 ? addressParts[0] : null;
+                }
+                return null;
+            }
+        }
+        public string? Address2Home
+        {
+            get
+            {
+                if (AddressHome != null)
+                {
+                    string[] addressParts = AddressHome.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    return addressParts.Length > 1 ? addressParts[1] : null;
+                }
+                return null;
+            }
+        }
+        public string? Address3Home
+        {
+            get
+            {
+                if (AddressHome != null)
+                {
+                    string[] addressParts = AddressHome.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    return addressParts.Length > 2 ? addressParts[2] : null;
+                }
+                return null;
+            }
+        }
+        public string? Address4Home
+        {
+            get
+            {
+                if (AddressHome != null)
+                {
+                    string[] addressParts = AddressHome.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    return addressParts.Length > 3 ? addressParts[3] : null;
+                }
+                return null;
+            }
+        }
+        public string? Address5Home
+        {
+            get
+            {
+                if (AddressHome != null)
+                {
+                    string[] addressParts = AddressHome.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    return addressParts.Length > 4 ? addressParts[4] : null;
+                }
+                return null;
+            }
+        }
+        public string? CountryCodeHome { get; set; }
+        public string? CountryNameHome { get; set; }
+        [MaxLength(8)]
+        public string? PostCodeHome { get; set; }
+        public string? AddressInvoice { get; set; }
+        public string? Address1Invoice
+        {
+            get
+            {
+                if (AddressInvoice != null)
+                {
+                    string[] addressParts = AddressInvoice.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    return addressParts.Length > 0 ? addressParts[0] : null;
+                }
+                return null;
+            }
+        }
+        public string? Address2Invoice
+        {
+            get
+            {
+                if (AddressInvoice != null)
+                {
+                    string[] addressParts = AddressInvoice.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    return addressParts.Length > 1 ? addressParts[1] : null;
+                }
+                return null;
+            }
+        }
+        public string? Address3Invoice
+        {
+            get
+            {
+                if (AddressInvoice != null)
+                {
+                    string[] addressParts = AddressInvoice.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    return addressParts.Length > 2 ? addressParts[2] : null;
+                }
+                return null;
+            }
+        }
+        public string? Address4Invoice
+        {
+            get
+            {
+                if (AddressInvoice != null)
+                {
+                    string[] addressParts = AddressInvoice.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    return addressParts.Length > 3 ? addressParts[3] : null;
+                }
+                return null;
+            }
+        }
+        public string? Address5Invoice
+        {
+            get
+            {
+                if (AddressInvoice != null)
+                {
+                    string[] addressParts = AddressInvoice.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    return addressParts.Length > 4 ? addressParts[4] : null;
+                }
+                return null;
+            }
+        }
+        public string? CountryCodeInvoice { get; set; }
+        public string? CountryNameInvoice { get; set; }
+        [MaxLength(8)]
+        public string? PostCodeInvoice { get; set; }
         public string? EmailAddress { get; set; }
         public string? Mobile { get; set; }
         public string? HomePhone { get; set; }
