@@ -24,7 +24,9 @@ namespace NetSuiteIntegration
         public static bool CanConnect { get; set; }
         public static string? UNITeAPIToken { get; set; }
         public static bool? UNITeSessionIsValid { get; set; } = false;
-        public static string? UNITeRepGenReportReference { get; set; } = "NetSuiteExport";
+        //API must be granted access to these reports in Security and Settings
+        public static string? UNITeRepGenForEnrolments { get; set; } = "NetSuiteExportCustomers";
+        public static string? UNITeRepGenForCourses { get; set; } = "NetSuiteExportCourses";
 
         static async Task<int> Main(string[] args)
         {
@@ -34,11 +36,11 @@ namespace NetSuiteIntegration
             Console.WriteLine($"=========================================");
 
             string? productVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString();
-            Console.WriteLine($"\nVersion {productVersion}");
-            Console.WriteLine($"\nCopyright BIMM");
+            Console.WriteLine($"Version {productVersion}");
+            Console.WriteLine($"Copyright BIMM");
 
 
-            Console.WriteLine($"\nSetting Locale To {locale}");
+            Console.WriteLine($"Setting Locale To {locale}");
 
             #region Setup and Logging
             //Set locale to ensure dates and currency are correct
@@ -113,7 +115,7 @@ namespace NetSuiteIntegration
             log.Information("Start");
 
             //Run main process
-            await process!.Process(UNITeRepGenReportReference);
+            await process!.Process(UNITeRepGenForEnrolments, UNITeRepGenForCourses);
 
 
             #endregion

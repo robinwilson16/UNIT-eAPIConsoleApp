@@ -317,6 +317,10 @@ namespace NetSuiteIntegration.Models
         public string? CourseTitle { get; set; }
         public string? CourseTypeCode { get; set; }
         public string? CourseTypeName { get; set; }
+        public string? SubjectCode { get; set; }
+        public string? SubjectName { get; set; }
+        public string? LevelCode { get; set; }
+        public string? LevelName { get; set; }
         public DateTime? StartDateEnrol { get; set; }
         public DateTime? ExpectedEndDateEnrol { get; set; }
         public DateTime? ActualEndDateEnrol { get; set; }

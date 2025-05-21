@@ -97,7 +97,7 @@ namespace NetSuiteIntegration.Services
                 else
                 {
                     string? errorMessage = response.Content.ReadAsStringAsync().Result;
-                    _Log.Error($"Failed to export report{reportName} due to error {errorMessage}");
+                    _Log.Error($"Failed to export report {reportName} due to error {errorMessage}");
                     return default;
                 }
             }

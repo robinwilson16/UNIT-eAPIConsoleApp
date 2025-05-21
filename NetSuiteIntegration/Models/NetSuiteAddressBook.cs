@@ -26,6 +26,8 @@ namespace NetSuiteIntegration.Models
 
         //Extra Fields
         [JsonIgnore]
+        public RecordActionType? RecordActionType { get; set; }
+        [JsonIgnore]
         public NetSuiteAddress? Address { get; set; }
     }
 }
