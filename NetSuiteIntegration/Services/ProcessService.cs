@@ -61,7 +61,8 @@ namespace NetSuiteIntegration.Services
             IList<UNITeEnrolment>? uniteEnrolments = new List<UNITeEnrolment>();
             IList<UNITeCourse>? uniteCourses = new List<UNITeCourse>();
             IList<NetSuiteCustomer>? uniteNetSuiteCustomers = new List<NetSuiteCustomer>();
-            
+            IList<NetSuiteNonInventorySaleItem>? uniteNetSuiteNonInventorySaleItems = new List<NetSuiteNonInventorySaleItem>();
+
             try
             {
                 _log?.Information("\nLoading UNIT-e Enrolments...");
@@ -90,86 +91,89 @@ namespace NetSuiteIntegration.Services
                     if (uniteStudents != null)
                         uniteNetSuiteCustomers = MapUNITeStudentsToNetSuiteCustomers(uniteStudents);
 
-                    int rowNumber = 0;
-                    foreach (NetSuiteCustomer? uniteNetSuiteCustomer in uniteNetSuiteCustomers!)
+                    if (uniteNetSuiteCustomers != null)
                     {
-                        rowNumber++;
-                        _log?.Information($"\nRecord {rowNumber} of {uniteNetSuiteCustomers.Count}: Searching for {uniteNetSuiteCustomer?.LastName}, {uniteNetSuiteCustomer?.FirstName} ({uniteNetSuiteCustomer?.CustEntityClientStudentNo}) in NetSuite");
-
-                        #region Find Customer and Related Datasets
-                        //Find this customer in NetSuite
-                        NetSuiteCustomer? matchedCustomer = await GetCustomer(uniteNetSuiteCustomer ?? new NetSuiteCustomer());
-
-                        if (matchedCustomer?.RecordMatchType == RecordMatchType.ByStudentRef)
-                            _log?.Information($"Customer Found in NetSuite by Student Ref with NetSuite Customer ID: {matchedCustomer?.ID}");
-                        else if (matchedCustomer?.RecordMatchType == RecordMatchType.ByERPID)
-                            _log?.Information($"Customer Found in NetSuite by ERP ID with NetSuite Customer ID: {matchedCustomer?.ID}");
-                        else if (matchedCustomer?.RecordMatchType == RecordMatchType.ByPersonalDetails)
-                            _log?.Information($"Customer Found in NetSuite by Name/Email/Phone with NetSuite Customer ID: {matchedCustomer?.ID}");
-                        else
-                            _log?.Information($"Customer Not Found in NetSuite");
-
-                        int? numUniteAddresses = uniteNetSuiteCustomer?.Addresses?.Where(a => a.Label != null).DistinctBy(a => a.Label).ToList().Count ?? 0;
-
-                        if (matchedCustomer?.ID != null)
+                        int rowNumber = 0;
+                        foreach (NetSuiteCustomer? uniteNetSuiteCustomer in uniteNetSuiteCustomers!)
                         {
-                            //Update the ID of the record that came from UNIT-e so it can be used to update the record in NetSuite
-                            if (uniteNetSuiteCustomer != null)
-                                uniteNetSuiteCustomer.ID = matchedCustomer?.ID;
+                            rowNumber++;
+                            _log?.Information($"\nRecord {rowNumber} of {uniteNetSuiteCustomers.Count}: Searching for {uniteNetSuiteCustomer?.LastName}, {uniteNetSuiteCustomer?.FirstName} ({uniteNetSuiteCustomer?.CustEntityClientStudentNo}) in NetSuite");
 
-                            //Get addresses
-                            if (matchedCustomer != null && matchedCustomer?.ID != null)
-                                matchedCustomer.Addresses = await GetAddresses(matchedCustomer);
+                            #region Find Customer and Related Datasets
+                            //Find this customer in NetSuite
+                            NetSuiteCustomer? matchedCustomer = await GetCustomer(uniteNetSuiteCustomer ?? new NetSuiteCustomer());
 
-                            _log?.Information($"\nFound {numUniteAddresses} addresses for customer in UNIT-e");
-                            _log?.Information($"Found {matchedCustomer?.Addresses?.Count ?? 0} addresses for customer in NetSuite");
-
-                            if (matchedCustomer?.Addresses?.Count > 0)
-                            {
-
-                            }
-                        }
-
-                        //_log?.Information($"Main Address Type {uniteNetSuiteCustomer?.Addresses?.Where(a => a.DefaultBilling == true).FirstOrDefault()?.Label}");
-
-                        //Check if addresses are up to date and flag each one for insert or update
-                        if (uniteNetSuiteCustomer != null)
-                            uniteNetSuiteCustomer.Addresses = CheckAddresses(uniteNetSuiteCustomer, matchedCustomer);
-
-                        #endregion
-
-                        #region Perform Updates to NetSuite Customers
-                        //Update or add the Customer record in NetSuite
-                        NetSuiteCustomer updatedCustomer = await UpdateCustomer(uniteNetSuiteCustomer ?? new NetSuiteCustomer(), ReadOnly);
-
-                        //Update the ID of the record that came from UNIT-e so it matches the newly inserted record if not updating an existing NetSuite record
-                        if (uniteNetSuiteCustomer != null)
-                        {
-                            if (updatedCustomer?.RecordActionType == RecordActionType.Insert)
-                            {
-                                //Add the ID of the newly inserted record to the UNIT-e record
-                                uniteNetSuiteCustomer.ID = updatedCustomer?.ID;
-                                _log?.Information($"Inserted New NetSuite Customer: {uniteNetSuiteCustomer?.ID}");
-                            }
-                            else if (updatedCustomer?.RecordActionType == RecordActionType.Update)
-                            {
-                                _log?.Information($"Synced Existing NetSuite Customer: {uniteNetSuiteCustomer?.ID}");
-                            }
+                            if (matchedCustomer?.RecordMatchType == RecordMatchType.ByStudentRef)
+                                _log?.Information($"Customer Found in NetSuite by Student Ref with NetSuite Customer ID: {matchedCustomer?.ID}");
+                            else if (matchedCustomer?.RecordMatchType == RecordMatchType.ByERPID)
+                                _log?.Information($"Customer Found in NetSuite by ERP ID with NetSuite Customer ID: {matchedCustomer?.ID}");
+                            else if (matchedCustomer?.RecordMatchType == RecordMatchType.ByPersonalDetails)
+                                _log?.Information($"Customer Found in NetSuite by Name/Email/Phone with NetSuite Customer ID: {matchedCustomer?.ID}");
                             else
+                                _log?.Information($"Customer Not Found in NetSuite");
+
+                            int? numUniteAddresses = uniteNetSuiteCustomer?.Addresses?.Where(a => a.Label != null).DistinctBy(a => a.Label).ToList().Count ?? 0;
+
+                            if (matchedCustomer?.ID != null)
                             {
-                                _log?.Information($"No Changes Made to NetSuite Customer: {uniteNetSuiteCustomer?.ID}");
+                                //Update the ID of the record that came from UNIT-e so it can be used to update the record in NetSuite
+                                if (uniteNetSuiteCustomer != null)
+                                    uniteNetSuiteCustomer.ID = matchedCustomer?.ID;
+
+                                //Get addresses
+                                if (matchedCustomer != null && matchedCustomer?.ID != null)
+                                    matchedCustomer.Addresses = await GetAddresses(matchedCustomer);
+
+                                _log?.Information($"\nFound {numUniteAddresses} addresses for customer in UNIT-e");
+                                _log?.Information($"Found {matchedCustomer?.Addresses?.Count ?? 0} addresses for customer in NetSuite");
+
+                                if (matchedCustomer?.Addresses?.Count > 0)
+                                {
+
+                                }
                             }
+
+                            //_log?.Information($"Main Address Type {uniteNetSuiteCustomer?.Addresses?.Where(a => a.DefaultBilling == true).FirstOrDefault()?.Label}");
+
+                            //Check if addresses are up to date and flag each one for insert or update
+                            if (uniteNetSuiteCustomer != null)
+                                uniteNetSuiteCustomer.Addresses = CheckAddresses(uniteNetSuiteCustomer, matchedCustomer);
+
+                            #endregion
+
+                            #region Perform Updates to NetSuite Customers
+                            //Update or add the Customer record in NetSuite
+                            NetSuiteCustomer updatedCustomer = await UpdateCustomer(uniteNetSuiteCustomer ?? new NetSuiteCustomer(), ReadOnly);
+
+                            //Update the ID of the record that came from UNIT-e so it matches the newly inserted record if not updating an existing NetSuite record
+                            if (uniteNetSuiteCustomer != null)
+                            {
+                                if (updatedCustomer?.RecordActionType == RecordActionType.Insert)
+                                {
+                                    //Add the ID of the newly inserted record to the UNIT-e record
+                                    uniteNetSuiteCustomer.ID = updatedCustomer?.ID;
+                                    _log?.Information($"Inserted New NetSuite Customer: {uniteNetSuiteCustomer?.ID}");
+                                }
+                                else if (updatedCustomer?.RecordActionType == RecordActionType.Update)
+                                {
+                                    _log?.Information($"Synced Existing NetSuite Customer: {uniteNetSuiteCustomer?.ID}");
+                                }
+                                else
+                                {
+                                    _log?.Information($"No Changes Made to NetSuite Customer: {uniteNetSuiteCustomer?.ID}");
+                                }
+                            }
+
+                            //Update the addresses in NetSuite
+                            bool? addressesUpdated = false;
+                            if (uniteNetSuiteCustomer != null)
+                                addressesUpdated = await UpdateAddresses(uniteNetSuiteCustomer, ReadOnly);
+
+                            #endregion
+
+                            if (FirstRecordOnly == true)
+                                break;
                         }
-
-                        //Update the addresses in NetSuite
-                        bool? addressesUpdated = false;
-                        if (uniteNetSuiteCustomer != null)
-                            addressesUpdated = await UpdateAddresses(uniteNetSuiteCustomer, ReadOnly);
-
-                        #endregion
-
-                        if (FirstRecordOnly == true)
-                            break;
                     }
                 }
 
@@ -236,8 +240,19 @@ namespace NetSuiteIntegration.Services
                 {
                     _log?.Information($"Loaded {uniteCourses?.Count} UNIT-e Courses");
 
+                    if (uniteCourses != null)
+                        uniteNetSuiteNonInventorySaleItems = MapUNITeCoursesToNetSuiteNonInventorySaleItems(uniteCourses);
 
+                    if (uniteNetSuiteNonInventorySaleItems != null)
+                    {
+                        int rowNumber = 0;
+                        foreach (NetSuiteNonInventorySaleItem? saleItem in uniteNetSuiteNonInventorySaleItems!)
+                        {
+                            rowNumber++;
 
+                            //TO-DO
+                        }
+                    }
 
                     return true;
                 }
@@ -389,6 +404,20 @@ namespace NetSuiteIntegration.Services
             }).ToList<NetSuiteCustomer>();
 
             return netSuiteCustomers ?? new List<NetSuiteCustomer>();
+        }
+
+        public IList<NetSuiteNonInventorySaleItem> MapUNITeCoursesToNetSuiteNonInventorySaleItems(IList<UNITeCourse> uniteCourses)
+        {
+            IList<NetSuiteNonInventorySaleItem>? netSuiteNonInventorySaleItems = new List<NetSuiteNonInventorySaleItem>();
+
+            //Map UNIT-e Courses to NetSuite Non-Inventory Sale Items
+            netSuiteNonInventorySaleItems = uniteCourses?.Select(crs => new NetSuiteNonInventorySaleItem
+            {
+                ItemID = crs.CourseCode,
+                DisplayName = crs.CourseTitle
+            }).ToList<NetSuiteNonInventorySaleItem>();
+
+            return netSuiteNonInventorySaleItems ?? new List<NetSuiteNonInventorySaleItem>();
         }
 
         public NetSuiteSearchParameter AddSearchParameter(Operand? operand, string? fieldName, Operator? op, string? value)
