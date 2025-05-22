@@ -2,8 +2,10 @@
 using Microsoft.EntityFrameworkCore;
 using NetSuiteIntegration.Interfaces;
 using NetSuiteIntegration.Models;
+using NetSuiteIntegration.Shared;
 using Serilog;
 using static System.Runtime.InteropServices.JavaScript.JSType;
+using static NetSuiteIntegration.Models.SharedEnum;
 
 namespace NetSuiteIntegration.Services
 {
@@ -13,11 +15,8 @@ namespace NetSuiteIntegration.Services
         IFinanceWebService? _netsuite = netsuite;
         ILogger? _log = logger;
 
-        public async Task<bool> Process(string? _enrolmentRepGen, string? _courseRepGen)
+        public async Task<bool> Process(string? _enrolmentRepGen, string? _courseRepGen, bool? readOnly, bool? firstRecordOnly)
         {
-            bool? ReadOnly = true;
-            bool? FirstRecordOnly = true;
-
             //Steps
             //1. Get UNIT-e Enrolments in Scope
             //2. Map to Distinct UNIT-e Students
@@ -55,6 +54,12 @@ namespace NetSuiteIntegration.Services
                 _log?.Error("UNIT-e Enrolment Report Reference is null/not specified. This should reference the RepGen Report used to extract the data.");
                 return false;
             }
+
+            if (readOnly == true)
+                _log?.Information("** Running in Read Only Mode. No changes will be made to NetSuite. **");
+
+            if (firstRecordOnly == true)
+                _log?.Information("** Running in First Record Only Mode. Only the first record will be processed (helpful for faster debugging). **");
 
             //Set up lists of students and enrolments and courses
             IList<UNITeStudent>? uniteStudents = new List<UNITeStudent>();
@@ -101,13 +106,13 @@ namespace NetSuiteIntegration.Services
 
                             #region Find Customer and Related Datasets
                             //Find this customer in NetSuite
-                            NetSuiteCustomer? matchedCustomer = await GetCustomer(uniteNetSuiteCustomer ?? new NetSuiteCustomer());
+                            NetSuiteCustomer? matchedCustomer = await GetNetSuiteCustomer(uniteNetSuiteCustomer ?? new NetSuiteCustomer());
 
-                            if (matchedCustomer?.RecordMatchType == RecordMatchType.ByStudentRef)
+                            if (matchedCustomer?.CustomerMatchType == CustomerMatchType.ByStudentRef)
                                 _log?.Information($"Customer Found in NetSuite by Student Ref with NetSuite Customer ID: {matchedCustomer?.ID}");
-                            else if (matchedCustomer?.RecordMatchType == RecordMatchType.ByERPID)
+                            else if (matchedCustomer?.CustomerMatchType == CustomerMatchType.ByERPID)
                                 _log?.Information($"Customer Found in NetSuite by ERP ID with NetSuite Customer ID: {matchedCustomer?.ID}");
-                            else if (matchedCustomer?.RecordMatchType == RecordMatchType.ByPersonalDetails)
+                            else if (matchedCustomer?.CustomerMatchType == CustomerMatchType.ByPersonalDetails)
                                 _log?.Information($"Customer Found in NetSuite by Name/Email/Phone with NetSuite Customer ID: {matchedCustomer?.ID}");
                             else
                                 _log?.Information($"Customer Not Found in NetSuite");
@@ -122,7 +127,7 @@ namespace NetSuiteIntegration.Services
 
                                 //Get addresses
                                 if (matchedCustomer != null && matchedCustomer?.ID != null)
-                                    matchedCustomer.Addresses = await GetAddresses(matchedCustomer);
+                                    matchedCustomer.Addresses = await GetNetSuiteAddresses(matchedCustomer);
 
                                 _log?.Information($"\nFound {numUniteAddresses} addresses for customer in UNIT-e");
                                 _log?.Information($"Found {matchedCustomer?.Addresses?.Count ?? 0} addresses for customer in NetSuite");
@@ -137,13 +142,13 @@ namespace NetSuiteIntegration.Services
 
                             //Check if addresses are up to date and flag each one for insert or update
                             if (uniteNetSuiteCustomer != null)
-                                uniteNetSuiteCustomer.Addresses = CheckAddresses(uniteNetSuiteCustomer, matchedCustomer);
+                                uniteNetSuiteCustomer.Addresses = CheckNetSuiteAddresses(uniteNetSuiteCustomer, matchedCustomer);
 
                             #endregion
 
-                            #region Perform Updates to NetSuite Customers
+                            #region Perform Updates to NetSuite Customer
                             //Update or add the Customer record in NetSuite
-                            NetSuiteCustomer updatedCustomer = await UpdateCustomer(uniteNetSuiteCustomer ?? new NetSuiteCustomer(), ReadOnly);
+                            NetSuiteCustomer updatedCustomer = await UpdateNetSuiteCustomer(uniteNetSuiteCustomer ?? new NetSuiteCustomer(), readOnly);
 
                             //Update the ID of the record that came from UNIT-e so it matches the newly inserted record if not updating an existing NetSuite record
                             if (uniteNetSuiteCustomer != null)
@@ -167,11 +172,11 @@ namespace NetSuiteIntegration.Services
                             //Update the addresses in NetSuite
                             bool? addressesUpdated = false;
                             if (uniteNetSuiteCustomer != null)
-                                addressesUpdated = await UpdateAddresses(uniteNetSuiteCustomer, ReadOnly);
+                                addressesUpdated = await UpdateNetSuiteAddresses(uniteNetSuiteCustomer, readOnly);
 
                             #endregion
 
-                            if (FirstRecordOnly == true)
+                            if (firstRecordOnly == true)
                                 break;
                         }
                     }
@@ -249,8 +254,51 @@ namespace NetSuiteIntegration.Services
                         foreach (NetSuiteNonInventorySaleItem? saleItem in uniteNetSuiteNonInventorySaleItems!)
                         {
                             rowNumber++;
+                            _log?.Information($"\nRecord {rowNumber} of {uniteNetSuiteNonInventorySaleItems.Count}: Searching for {saleItem?.ItemID} - {saleItem?.DisplayName} in NetSuite");
 
-                            //TO-DO
+                            #region Find Non-Inventory Sale Item
+                            //Find this course (non-inventory sale item) in NetSuite
+                            NetSuiteNonInventorySaleItem? matchedSaleItem = await GetNetSuiteNonInventorySaleItem(saleItem ?? new NetSuiteNonInventorySaleItem());
+
+                            if (matchedSaleItem?.NonInventorySaleItemMatchType == NonInventorySaleItemMatchType.ByCourseCode)
+                                _log?.Information($"Course Found in NetSuite by Course Code with NetSuite Non-Inventory Sale Item ID: {matchedSaleItem?.ID}");
+                            else
+                                _log?.Information($"Course Not Found in NetSuite");
+
+                            if (matchedSaleItem?.ID != null)
+                            {
+                                //Update the ID of the record that came from UNIT-e so it can be used to update the record in NetSuite
+                                if (saleItem != null)
+                                    saleItem.ID = matchedSaleItem?.ID;
+                            }
+                            #endregion
+
+                            #region Perform Updates to NetSuite Non-Inventory Sale Item
+                            //Update or add the Non-Inventory Sale record in NetSuite
+                            NetSuiteNonInventorySaleItem updatedNetSuiteNonInventorySaleItem = await UpdateNetSuiteNonInventorySaleItem(saleItem ?? new NetSuiteNonInventorySaleItem(), readOnly);
+
+                            //Update the ID of the record that came from UNIT-e so it matches the newly inserted record if not updating an existing NetSuite record
+                            if (saleItem != null)
+                            {
+                                if (updatedNetSuiteNonInventorySaleItem?.RecordActionType == RecordActionType.Insert)
+                                {
+                                    //Add the ID of the newly inserted record to the UNIT-e record
+                                    saleItem.ID = updatedNetSuiteNonInventorySaleItem?.ID;
+                                    _log?.Information($"Inserted New NetSuite Non-Inventory Sale Item: {saleItem?.ID}");
+                                }
+                                else if (updatedNetSuiteNonInventorySaleItem?.RecordActionType == RecordActionType.Update)
+                                {
+                                    _log?.Information($"Synced Existing NetSuite Non-Inventory Sale Item: {saleItem?.ID}");
+                                }
+                                else
+                                {
+                                    _log?.Information($"No Changes Made to NetSuite Non-Inventory Sale Item: {saleItem?.ID}");
+                                }
+                            }
+                            #endregion
+
+                            if (firstRecordOnly == true)
+                                break;
                         }
                     }
 
@@ -413,14 +461,71 @@ namespace NetSuiteIntegration.Services
             //Map UNIT-e Courses to NetSuite Non-Inventory Sale Items
             netSuiteNonInventorySaleItems = uniteCourses?.Select(crs => new NetSuiteNonInventorySaleItem
             {
+                Class = new NetSuiteNonInventorySaleItemClass
+                {
+                    RefName = crs.CampusName
+                },
+                CreatedDate = DateTime.Now,
+                CustItem1 = crs.StartDate?.Format("yyyy-MM-dd"),
+                CustItem2 = crs.EndDate?.Format("yyyy-MM-dd"),
+                CustItemIsPOItem = false,
+                CustomForm = new NetSuiteNonInventorySaleItemCustomForm
+                {
+                    RefName = crs.SubjectName
+                },
+                DeferredRevenueAccount = new NetSuiteNonInventorySaleItemDeferredRevenueAccount
+                {
+                    ID = "216",
+                    RefName = "30602 Deferred Revenue"
+                },
+                Department = new NetSuiteNonInventorySaleItemDepartment
+                {
+                    ID = "26",
+                    RefName = "Income : Student Income"
+                },
+                DirectRevenuePosting = false,
+                DisplayName = crs.CourseTitle,
+                EnforceMinQTYInternally = true,
+                ExternalID = $"CRM_{crs.CourseCode?.Replace("/", "_")}",
+                IncludeChildren = false,
+                IncomeAccount = new NetSuiteNonInventorySaleItemIncomeAccount
+                {
+                    ID = "1233",
+                    RefName = "50120 Total Net Income : Total Fee Income : Fee Income - Postgrad"
+                },
+                IsFulfillable = false,
+                IsGCOCompliant = false,
+                IsInactive = false,
+                IsOnline = false,
                 ItemID = crs.CourseCode,
-                DisplayName = crs.CourseTitle
+                Location = new NetSuiteNonInventorySaleItemLocation
+                {
+                    RefName = crs.CampusName
+                },
+                RevenueRecognitionRule = new NetSuiteNonInventorySaleItemRevenueRecognitionRule
+                {
+                    ID = "4",
+                    RefName = "BIMM - Straight Line, Exact Days"
+                },
+                RevRecForecastRule = new NetSuiteNonInventorySaleItemRevRecForecastRule
+                {
+                    ID = "4",
+                    RefName = "BIMM - Straight Line, Exact Days"
+                },
+                SalesDescription = crs.CourseTitle,
+                UseMarginalRates = false,
+                VSOEDelivered = false,
+                VSOESopGroup = new NetSuiteNonInventorySaleItemVSOESopGroup
+                {
+                    ID = "NORMAL",
+                    RefName = "Normal"
+                },
             }).ToList<NetSuiteNonInventorySaleItem>();
 
             return netSuiteNonInventorySaleItems ?? new List<NetSuiteNonInventorySaleItem>();
         }
 
-        public NetSuiteSearchParameter AddSearchParameter(Operand? operand, string? fieldName, Operator? op, string? value)
+        public NetSuiteSearchParameter AddNetSuiteSearchParameter(Operand? operand, string? fieldName, Operator? op, string? value)
         {
             NetSuiteSearchParameter param = new NetSuiteSearchParameter
             {
@@ -434,7 +539,7 @@ namespace NetSuiteIntegration.Services
             return param;
         }
 
-        public NetSuiteSearchParameter AddSearchParameter(Operand? operand, string? fieldName, Operator? op, string? value, bool? IncludeOpeningParenthesis, bool? IncludeClosingParenthesis)
+        public NetSuiteSearchParameter AddNetSuiteSearchParameter(Operand? operand, string? fieldName, Operator? op, string? value, bool? IncludeOpeningParenthesis, bool? IncludeClosingParenthesis)
         {
             NetSuiteSearchParameter param = new NetSuiteSearchParameter
             {
@@ -448,7 +553,7 @@ namespace NetSuiteIntegration.Services
             return param;
         }
 
-        public async Task<NetSuiteCustomer> GetCustomer(NetSuiteCustomer netSuiteCustomer)
+        public async Task<NetSuiteCustomer> GetNetSuiteCustomer(NetSuiteCustomer netSuiteCustomer)
         {
             NetSuiteCustomer? matchedCustomer = new NetSuiteCustomer();
             IList<NetSuiteSearchParameter> searchParameters = new List<NetSuiteSearchParameter>();
@@ -460,10 +565,10 @@ namespace NetSuiteIntegration.Services
             {
                 searchParameters = new List<NetSuiteSearchParameter>();
 
-                param = AddSearchParameter(null, "custentityclient_studentno", Operator.IS, netSuiteCustomer?.CustEntityClientStudentNo);
+                param = AddNetSuiteSearchParameter(null, "custentityclient_studentno", Operator.IS, netSuiteCustomer?.CustEntityClientStudentNo);
                 searchParameters.Add(param);
 
-                matchedCustomer = await FindCustomer(searchParameters, RecordMatchType.ByStudentRef);
+                matchedCustomer = await FindNetSuiteCustomer(searchParameters, CustomerMatchType.ByStudentRef);
             }
 
             //If unsuccessful check if the customer already exists in NetSuite by their ERP ID
@@ -471,10 +576,10 @@ namespace NetSuiteIntegration.Services
             {
                 searchParameters = new List<NetSuiteSearchParameter>();
 
-                param = AddSearchParameter(null, "custentity_crm_applicantid", Operator.IS, netSuiteCustomer?.CustEntityCRMApplicantID);
+                param = AddNetSuiteSearchParameter(null, "custentity_crm_applicantid", Operator.IS, netSuiteCustomer?.CustEntityCRMApplicantID);
                 searchParameters.Add(param);
 
-                matchedCustomer = await FindCustomer(searchParameters, RecordMatchType.ByERPID);
+                matchedCustomer = await FindNetSuiteCustomer(searchParameters, CustomerMatchType.ByERPID);
             }
 
             //If unsuccessful then attempt to match on name/email/mobile if all have values
@@ -482,25 +587,32 @@ namespace NetSuiteIntegration.Services
             {
                 searchParameters = new List<NetSuiteSearchParameter>();
 
-                param = AddSearchParameter(null, "firstName", Operator.IS, netSuiteCustomer?.FirstName);
+                param = AddNetSuiteSearchParameter(null, "firstName", Operator.IS, netSuiteCustomer?.FirstName);
                 searchParameters.Add(param);
 
-                param = AddSearchParameter(Operand.AND, "lastName", Operator.IS, netSuiteCustomer?.LastName);
+                param = AddNetSuiteSearchParameter(Operand.AND, "lastName", Operator.IS, netSuiteCustomer?.LastName);
                 searchParameters.Add(param);
 
-                param = AddSearchParameter(Operand.AND, "email", Operator.IS, netSuiteCustomer?.Email);
+                param = AddNetSuiteSearchParameter(Operand.AND, "email", Operator.IS, netSuiteCustomer?.Email);
                 searchParameters.Add(param);
 
-                param = AddSearchParameter(Operand.AND, "phone", Operator.IS, netSuiteCustomer?.Phone);
+                param = AddNetSuiteSearchParameter(Operand.AND, "phone", Operator.IS, netSuiteCustomer?.Phone);
                 searchParameters.Add(param);
 
-                matchedCustomer = await FindCustomer(searchParameters, RecordMatchType.ByPersonalDetails);
+                matchedCustomer = await FindNetSuiteCustomer(searchParameters, CustomerMatchType.ByPersonalDetails);
+            }
+
+            if (matchedCustomer?.ID == null)
+            {
+                //If no match found then create a new customer
+                matchedCustomer = new NetSuiteCustomer();
+                matchedCustomer.CustomerMatchType = CustomerMatchType.NotFound;
             }
 
             return matchedCustomer ?? new NetSuiteCustomer();
         }
 
-        public async Task<NetSuiteCustomer> FindCustomer(IList<NetSuiteSearchParameter>? searchParameters, RecordMatchType recordMatchType)
+        public async Task<NetSuiteCustomer> FindNetSuiteCustomer(IList<NetSuiteSearchParameter>? searchParameters, CustomerMatchType customerMatchType)
         {
             NetSuiteSearchResult? searchResults = new NetSuiteSearchResult();
             NetSuiteCustomer? matchedCustomer = new NetSuiteCustomer();
@@ -508,29 +620,34 @@ namespace NetSuiteIntegration.Services
             try
             {
                 //Perform the search
-                searchResults = await _netsuite?.Search<NetSuiteSearchResult>("customer", searchParameters);
+                if (searchParameters == null)
+                    searchParameters = new List<NetSuiteSearchParameter>();
+
+                if (_netsuite != null)
+                    searchResults = await _netsuite.Search<NetSuiteSearchResult>("customer", searchParameters);
 
                 if (searchResults?.Count > 0)
                 {
                     //Get record details if it matches as should only ever be one match here
-                    matchedCustomer = await _netsuite.Get<NetSuiteCustomer>("customer", int.Parse(searchResults?.Items?.FirstOrDefault()?.ID ?? "0"));
+                    if (_netsuite != null)
+                        matchedCustomer = await _netsuite.Get<NetSuiteCustomer>("customer", int.Parse(searchResults?.Items?.FirstOrDefault()?.ID ?? "0"));
                 }
 
                 if (matchedCustomer != null)
                 {
-                    matchedCustomer.RecordMatchType = recordMatchType;
+                    matchedCustomer.CustomerMatchType = customerMatchType;
                 }
             }
             catch (Exception ex)
             {
-                _log?.Error($"Error in FindCustomer: {ex.Message}");
+                _log?.Error($"Error in FindNetSuiteCustomer: {ex.Message}");
                 matchedCustomer = null;
             }
 
             return matchedCustomer ?? new NetSuiteCustomer();
         }
 
-        public async Task<NetSuiteCustomer> UpdateCustomer(NetSuiteCustomer netSuiteCustomer, bool? readOnly)
+        public async Task<NetSuiteCustomer> UpdateNetSuiteCustomer(NetSuiteCustomer netSuiteCustomer, bool? readOnly)
         {
             if (readOnly != true)
             {
@@ -538,7 +655,9 @@ namespace NetSuiteIntegration.Services
                 {
                     if (int.Parse(netSuiteCustomer?.ID ?? "0") > 0)
                     {
-                        NetSuiteCustomer? updatedNetSuiteCustomer = await _netsuite.Update<NetSuiteCustomer>("customer", int.Parse(netSuiteCustomer?.ID ?? "0"), netSuiteCustomer);
+                        NetSuiteCustomer? updatedNetSuiteCustomer = new NetSuiteCustomer();
+                        if (_netsuite != null)
+                            updatedNetSuiteCustomer = await _netsuite.Update<NetSuiteCustomer>("customer", int.Parse(netSuiteCustomer?.ID ?? "0"), netSuiteCustomer);
 
                         if (updatedNetSuiteCustomer != null)
                             updatedNetSuiteCustomer.RecordActionType = RecordActionType.Update;
@@ -548,7 +667,9 @@ namespace NetSuiteIntegration.Services
                     }
                     else
                     {
-                        NetSuiteCustomer? insertedNetSuiteCustomer = await _netsuite.Add<NetSuiteCustomer>("customer", netSuiteCustomer);
+                        NetSuiteCustomer? insertedNetSuiteCustomer = new NetSuiteCustomer();
+                        if (_netsuite != null)
+                            insertedNetSuiteCustomer = await _netsuite.Add<NetSuiteCustomer>("customer", netSuiteCustomer);
 
                         if (insertedNetSuiteCustomer != null)
                             insertedNetSuiteCustomer.RecordActionType = RecordActionType.Insert;
@@ -559,18 +680,20 @@ namespace NetSuiteIntegration.Services
                 }
                 catch (Exception ex)
                 {
-                    _log?.Error($"Error in UpdateCustomer: {ex.Message}");
+                    _log?.Error($"Error in UpdateNetSuiteCustomer: {ex.Message}");
+                    netSuiteCustomer.RecordActionType = RecordActionType.None;
                     return netSuiteCustomer ?? new NetSuiteCustomer();
                 }
             }
             else
             {
                 //_log?.Information($"ReadOnly Mode: No Changes Made to Customer");
+                netSuiteCustomer.RecordActionType = RecordActionType.None;
                 return netSuiteCustomer ?? new NetSuiteCustomer();
             }
         }
 
-        public async Task<IList<NetSuiteAddressBook>> GetAddresses(NetSuiteCustomer netSuiteCustomer)
+        public async Task<IList<NetSuiteAddressBook>> GetNetSuiteAddresses(NetSuiteCustomer netSuiteCustomer)
         {
             NetSuiteSearchResult? netSuiteSearchResult = new NetSuiteSearchResult();
             IList<NetSuiteAddressBook>? netSuiteAddressBookEntries = new List<NetSuiteAddressBook>();
@@ -578,7 +701,8 @@ namespace NetSuiteIntegration.Services
             if (netSuiteCustomer?.ID != null)
             {
                 //Get the addresses for this customer
-                netSuiteSearchResult = await _netsuite.GetAll<NetSuiteSearchResult>($"customer/{netSuiteCustomer?.ID}/addressBook");
+                if (_netsuite != null)
+                    netSuiteSearchResult = await _netsuite.GetAll<NetSuiteSearchResult>($"customer/{netSuiteCustomer?.ID}/addressBook");
                 //_log?.Information($"Found {netSuiteSearchResult?.TotalResults} Addresses for Customer: {netSuiteCustomer?.ID} in NetSuite");
             }
             else
@@ -594,8 +718,14 @@ namespace NetSuiteIntegration.Services
                     {
                         if (address != null)
                         {
-                            NetSuiteAddressBook? netSuiteAddressBook = await _netsuite.Get<NetSuiteAddressBook>($"customer/{netSuiteCustomer?.ID}/addressBook", address?.IDFromIDAndLink ?? 0);
-                            NetSuiteAddress? netSuiteAddress = await _netsuite.GetAll<NetSuiteAddress>($"customer/{netSuiteCustomer?.ID}/addressBook/{address?.IDFromIDAndLink}/addressBookAddress");
+                            NetSuiteAddressBook? netSuiteAddressBook = new NetSuiteAddressBook();
+                            NetSuiteAddress? netSuiteAddress = new NetSuiteAddress();
+                            if (_netsuite != null)
+                            {
+                                netSuiteAddressBook = await _netsuite.Get<NetSuiteAddressBook>($"customer/{netSuiteCustomer?.ID}/addressBook", address?.IDFromIDAndLink ?? 0);
+                                netSuiteAddress = await _netsuite.GetAll<NetSuiteAddress>($"customer/{netSuiteCustomer?.ID}/addressBook/{address?.IDFromIDAndLink}/addressBookAddress");
+                            }
+                                
                             if (netSuiteAddressBook != null && netSuiteAddress != null)
                             {
                                 netSuiteAddressBook.Address = netSuiteAddress;
@@ -606,7 +736,7 @@ namespace NetSuiteIntegration.Services
                 }
                 catch (Exception ex)
                 {
-                    _log?.Error($"Error in GetAddresses: {ex.Message}");
+                    _log?.Error($"Error in GetNetSuiteAddresses: {ex.Message}");
                     netSuiteAddressBookEntries = null;
                 }
             }
@@ -614,7 +744,7 @@ namespace NetSuiteIntegration.Services
             return netSuiteAddressBookEntries ?? new List<NetSuiteAddressBook>();
         }
 
-        public ICollection<NetSuiteAddressBook> CheckAddresses(NetSuiteCustomer netSuiteCustomer, NetSuiteCustomer? matchedCustomer)
+        public ICollection<NetSuiteAddressBook> CheckNetSuiteAddresses(NetSuiteCustomer netSuiteCustomer, NetSuiteCustomer? matchedCustomer)
         {
             int? numUniteAddresses = netSuiteCustomer?.Addresses?.Where(a => a.Label != null).DistinctBy(a => a.Label).ToList().Count ?? 0;
 
@@ -636,7 +766,7 @@ namespace NetSuiteIntegration.Services
 
                         addressNum++;
 
-                        if (matchedCustomer != null)
+                        if (matchedCustomer != null && matchedCustomer.Addresses != null)
                         {
                             foreach (NetSuiteAddressBook? matchedAddress in matchedCustomer!.Addresses)
                             {
@@ -695,7 +825,7 @@ namespace NetSuiteIntegration.Services
             return netSuiteCustomer?.Addresses ?? new List<NetSuiteAddressBook>();
         }
 
-        public async Task<bool?> UpdateAddresses(NetSuiteCustomer netSuiteCustomer, bool? readOnly)
+        public async Task<bool?> UpdateNetSuiteAddresses(NetSuiteCustomer netSuiteCustomer, bool? readOnly)
         {
             bool? isOK = true;
             if (readOnly != true)
@@ -741,6 +871,115 @@ namespace NetSuiteIntegration.Services
             }
 
             return isOK;
+        }
+
+        public async Task<NetSuiteNonInventorySaleItem> GetNetSuiteNonInventorySaleItem(NetSuiteNonInventorySaleItem netSuiteNonInventorySaleItem)
+        {
+            NetSuiteNonInventorySaleItem? matchedSaleItem = new NetSuiteNonInventorySaleItem();
+            IList<NetSuiteSearchParameter> searchParameters = new List<NetSuiteSearchParameter>();
+            NetSuiteSearchParameter param = new NetSuiteSearchParameter();
+            NetSuiteSearchResult? searchResults = new NetSuiteSearchResult();
+
+            //Check if the course already exists in NetSuite by the course code
+            if (matchedSaleItem?.ID == null)
+            {
+                searchParameters = new List<NetSuiteSearchParameter>();
+
+                param = AddNetSuiteSearchParameter(null, "itemID", Operator.IS, netSuiteNonInventorySaleItem?.ItemID);
+                searchParameters.Add(param);
+
+                matchedSaleItem = await FindNetSuiteNonInventorySaleItem(searchParameters, NonInventorySaleItemMatchType.ByCourseCode);
+            }
+
+            if (matchedSaleItem?.ID == null)
+            {
+                //If no match found then create a new customer
+                matchedSaleItem = new NetSuiteNonInventorySaleItem();
+                matchedSaleItem.NonInventorySaleItemMatchType = NonInventorySaleItemMatchType.NotFound;
+            }
+
+            return matchedSaleItem ?? new NetSuiteNonInventorySaleItem();
+        }
+
+        public async Task<NetSuiteNonInventorySaleItem> FindNetSuiteNonInventorySaleItem(IList<NetSuiteSearchParameter>? searchParameters, NonInventorySaleItemMatchType nonInventorySaleItemMatchType)
+        {
+            NetSuiteSearchResult? searchResults = new NetSuiteSearchResult();
+            NetSuiteNonInventorySaleItem? matchedSaleItem = new NetSuiteNonInventorySaleItem();
+
+            try
+            {
+                //Perform the search
+                if (searchParameters == null)
+                    searchParameters = new List<NetSuiteSearchParameter>();
+                
+                if (_netsuite != null)
+                    searchResults = await _netsuite.Search<NetSuiteSearchResult>("nonInventorySaleItem", searchParameters);
+
+                if (searchResults?.Count > 0)
+                {
+                    //Get record details if it matches as should only ever be one match here
+                    if (_netsuite != null)
+                        matchedSaleItem = await _netsuite.Get<NetSuiteNonInventorySaleItem>("nonInventorySaleItem", int.Parse(searchResults?.Items?.FirstOrDefault()?.ID ?? "0"));
+                }
+
+                if (matchedSaleItem != null)
+                {
+                    matchedSaleItem.NonInventorySaleItemMatchType = nonInventorySaleItemMatchType;
+                }
+            }
+            catch (Exception ex)
+            {
+                _log?.Error($"Error in FindNetSuiteNonInventorySaleItem: {ex.Message}");
+                matchedSaleItem = null;
+            }
+
+            return matchedSaleItem ?? new NetSuiteNonInventorySaleItem();
+        }
+
+        public async Task<NetSuiteNonInventorySaleItem> UpdateNetSuiteNonInventorySaleItem(NetSuiteNonInventorySaleItem netSuiteNonInventorySaleItem, bool? readOnly)
+        {
+            if (readOnly != true)
+            {
+                try
+                {
+                    if (int.Parse(netSuiteNonInventorySaleItem?.ID ?? "0") > 0)
+                    {
+                        NetSuiteNonInventorySaleItem? updatedNetSuiteNonInventorySaleItem = new NetSuiteNonInventorySaleItem();
+                        if (_netsuite != null)
+                            updatedNetSuiteNonInventorySaleItem = await _netsuite.Update<NetSuiteNonInventorySaleItem>("nonInventorySaleItem", int.Parse(netSuiteNonInventorySaleItem?.ID ?? "0"), netSuiteNonInventorySaleItem);
+
+                        if (updatedNetSuiteNonInventorySaleItem != null)
+                            updatedNetSuiteNonInventorySaleItem.RecordActionType = RecordActionType.Update;
+
+                        //_log?.Information($"Synced Existing NetSuite Non-Inventory Sale Item: {updatedNetSuiteNonInventorySaleItem?.ID}");
+                        return updatedNetSuiteNonInventorySaleItem ?? new NetSuiteNonInventorySaleItem();
+                    }
+                    else
+                    {
+                        NetSuiteNonInventorySaleItem? insertedNetSuiteNonInventorySaleItem = new NetSuiteNonInventorySaleItem();
+                        if (_netsuite != null)
+                            insertedNetSuiteNonInventorySaleItem = await _netsuite.Add<NetSuiteNonInventorySaleItem>("nonInventorySaleItem", netSuiteNonInventorySaleItem);
+
+                        if (insertedNetSuiteNonInventorySaleItem != null)
+                            insertedNetSuiteNonInventorySaleItem.RecordActionType = RecordActionType.Insert;
+
+                        //_log?.Information($"Inserted New NetSuite Non-Inventory Sale Item: {insertedNetSuiteNonInventorySaleItem?.ID}");
+                        return insertedNetSuiteNonInventorySaleItem ?? new NetSuiteNonInventorySaleItem();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _log?.Error($"Error in UpdateNetSuiteNonInventorySaleItem: {ex.Message}");
+                    netSuiteNonInventorySaleItem.RecordActionType = RecordActionType.None;
+                    return netSuiteNonInventorySaleItem ?? new NetSuiteNonInventorySaleItem();
+                }
+            }
+            else
+            {
+                //_log?.Information($"ReadOnly Mode: No Changes Made to Non-Inventory Sale Item");
+                netSuiteNonInventorySaleItem.RecordActionType = RecordActionType.None;
+                return netSuiteNonInventorySaleItem ?? new NetSuiteNonInventorySaleItem();
+            }
         }
     }
 }

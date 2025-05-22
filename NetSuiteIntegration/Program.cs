@@ -28,19 +28,13 @@ namespace NetSuiteIntegration
         public static string? UNITeRepGenForEnrolments { get; set; } = "NetSuiteExportCustomers";
         public static string? UNITeRepGenForCourses { get; set; } = "NetSuiteExportCourses";
 
+        public static bool? ReadOnly = true;
+        public static bool? FirstRecordOnly = true;
+
         static async Task<int> Main(string[] args)
         {
             string? locale = "en-GB";
-
-            Console.WriteLine($"NetSuite Integration Utility");
-            Console.WriteLine($"=========================================");
-
             string? productVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString();
-            Console.WriteLine($"Version {productVersion}");
-            Console.WriteLine($"Copyright BIMM");
-
-
-            Console.WriteLine($"Setting Locale To {locale}");
 
             #region Setup and Logging
             //Set locale to ensure dates and currency are correct
@@ -50,8 +44,6 @@ namespace NetSuiteIntegration
             CultureInfo.DefaultThreadCurrentCulture = culture;
             CultureInfo.DefaultThreadCurrentUICulture = culture;
 
-
-            Console.WriteLine($"\nLoading Configuration Settings for APIs");
             //Starter application template using existing design patterns and existing Unit-e Web API code. DI and automapper etc
             //is possibly overkill but added for consistency.
 
@@ -62,6 +54,13 @@ namespace NetSuiteIntegration
             connectionString: "Server=uk-btn-sql8;Initial Catalog=NetSuite;TrustServerCertificate=True;Integrated Security=True",
             sinkOptions: new MSSqlServerSinkOptions { TableName = "Logs", AutoCreateSqlTable = true })
             .CreateLogger();
+
+            log.Information($"NetSuite Integration Utility");
+            log.Information($"=========================================");
+            log.Information($"Version {productVersion}");
+            log.Information($"Copyright BIMM");
+            log.Information($"Setting Locale To {locale}");
+            log.Information($"\nLoading Configuration Settings for APIs");
 
             //set up automapper. 
             var mapper = new MapperConfiguration(cfg =>
@@ -115,7 +114,7 @@ namespace NetSuiteIntegration
             log.Information("Start");
 
             //Run main process
-            await process!.Process(UNITeRepGenForEnrolments, UNITeRepGenForCourses);
+            await process!.Process(UNITeRepGenForEnrolments, UNITeRepGenForCourses, ReadOnly, FirstRecordOnly);
 
 
             #endregion

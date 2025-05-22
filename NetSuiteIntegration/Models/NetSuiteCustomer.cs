@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using static NetSuiteIntegration.Models.SharedEnum;
 
 namespace NetSuiteIntegration.Models
 {
@@ -127,26 +128,18 @@ namespace NetSuiteIntegration.Models
 
         //Extra fields
         [JsonIgnore]
-        public RecordMatchType? RecordMatchType { get; set; }
+        public CustomerMatchType? CustomerMatchType { get; set; }
         [JsonIgnore]
         public RecordActionType? RecordActionType { get; set; }
         [JsonIgnore]
         public ICollection<NetSuiteAddressBook>? Addresses { get; set; }
     }
 
-    public enum RecordMatchType
+    public enum CustomerMatchType
     {
         ByStudentRef,
         ByERPID,
         ByPersonalDetails,
         NotFound
-    }
-
-    public enum RecordActionType
-    {
-        Insert,
-        Update,
-        Delete,
-        None
     }
 }

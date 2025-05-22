@@ -8,6 +8,6 @@ namespace NetSuiteIntegration.Interfaces
 {
     public interface IProcessService
     {
-        Task<bool> Process(string? enrolmentRepGen, string? courseRepGen);
+        Task<bool> Process(string? enrolmentRepGen, string? courseRepGen, bool? readOnly, bool? firstRecordOnly);
     }
 }

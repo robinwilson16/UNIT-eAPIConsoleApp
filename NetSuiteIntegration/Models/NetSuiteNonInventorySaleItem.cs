@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using UNITe.Business.Helper;
+using static NetSuiteIntegration.Models.SharedEnum;
 
 namespace NetSuiteIntegration.Models
 {
@@ -17,14 +19,16 @@ namespace NetSuiteIntegration.Models
         public NetSuiteNonInventorySaleItemCreateRevenuePlansOn? CreateRevenuePlansOn { get; set; }
         public string? CustItem1 { get; set; }
         public string? CustItem2 { get; set; }
+        [JsonPropertyName("custitem_is_po_item")]
         public bool? CustItemIsPOItem { get; set; }
+        [JsonPropertyName("custitemexternalid_item")]
         public string? CustItemExternalIDItem { get; set; }
         public NetSuiteNonInventorySaleItemCustomForm? CustomForm { get; set; }
         public NetSuiteNonInventorySaleItemDeferredRevenueAccount? DeferredRevenueAccount { get; set; }
         public NetSuiteNonInventorySaleItemDepartment? Department { get; set; }
         public bool? DirectRevenuePosting { get; set; }
         public string? DisplayName { get; set; }
-        public bool? Enforceminqtyinternally { get; set; }
+        public bool? EnforceMinQTYInternally { get; set; }
         public string? ExternalID { get; set; }
         [Key]
         public string? ID { get; set; }
@@ -47,5 +51,17 @@ namespace NetSuiteIntegration.Models
         public bool? UseMarginalRates { get; set; }
         public bool? VSOEDelivered { get; set; }
         public NetSuiteNonInventorySaleItemVSOESopGroup? VSOESopGroup { get; set; }
+
+        //Extra fields
+        [JsonIgnore]
+        public NonInventorySaleItemMatchType? NonInventorySaleItemMatchType { get; set; }
+        [JsonIgnore]
+        public RecordActionType? RecordActionType { get; set; }
+    }
+
+    public enum NonInventorySaleItemMatchType
+    {
+        ByCourseCode,
+        NotFound
     }
 }
