@@ -10,6 +10,6 @@ namespace NetSuiteIntegration.Models
     [Keyless]
     public class NetSuiteNonInventorySaleItemPrice
     {
-        public List<NetSuiteLink>? Links { get; set; }
+        public ICollection<NetSuiteLink>? Links { get; set; }
     }
 }

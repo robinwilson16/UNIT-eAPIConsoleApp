@@ -10,7 +10,7 @@ namespace NetSuiteIntegration.Models
     [Keyless]
     public class NetSuiteNonInventorySaleItemDepartment
     {
-        public List<NetSuiteLink>? Links { get; set; }
+        public ICollection<NetSuiteLink>? Links { get; set; }
         public string? ID { get; set; }
         public string? RefName { get; set; }
     }

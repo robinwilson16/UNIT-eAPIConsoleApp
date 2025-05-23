@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace NetSuiteIntegration.Models
 {
     [Keyless]
-    public class NetSuiteNonInventorySaleItemRevenueRecognitionRule
+    public class NetSuiteInvoiceCurrency
     {
         public ICollection<NetSuiteLink>? Links { get; set; }
         public string? ID { get; set; }

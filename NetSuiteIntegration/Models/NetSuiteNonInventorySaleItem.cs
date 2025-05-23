@@ -12,7 +12,7 @@ namespace NetSuiteIntegration.Models
 {
     public class NetSuiteNonInventorySaleItem
     {
-        public List<NetSuiteLink>? Links { get; set; }
+        public ICollection<NetSuiteLink>? Links { get; set; }
         public NetSuiteNonInventorySaleItemClass? Class { get; set; }
         public NetSuiteNonInventorySaleItemCostEstimateType? CostEstimateType { get; set; }
         public DateTime? CreatedDate { get; set; }
