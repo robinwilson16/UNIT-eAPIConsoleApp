@@ -604,7 +604,7 @@ namespace NetSuiteIntegration.Services
             bool? isOK = true;
 
             IList<UNITeRefund>? uniteRefunds = new List<UNITeRefund>();
-            IList<NetSuiteCreditMemo>? uniteNetSuiteCreditMemos = new List<NetSuiteCreditMemo>();
+            IList<NetSuiteCustomerRefund>? uniteNetSuiteCustomerRefunds = new List<NetSuiteCustomerRefund>();
 
             try
             {
@@ -626,53 +626,53 @@ namespace NetSuiteIntegration.Services
                     _log?.Information($"Loaded {uniteRefunds?.Count} UNIT-e Refunds");
 
                     if (uniteRefunds != null)
-                        uniteNetSuiteCreditMemos = MapUNITeRefundsToNetSuiteCreditMemos(uniteRefunds);
+                        uniteNetSuiteCustomerRefunds = MapUNITeRefundsToNetSuiteCustomerRefunds(uniteRefunds);
 
-                    if (uniteNetSuiteCreditMemos != null)
+                    if (uniteNetSuiteCustomerRefunds != null)
                     {
                         int rowNumber = 0;
-                        foreach (NetSuiteCreditMemo? creditMemo in uniteNetSuiteCreditMemos!)
+                        foreach (NetSuiteCustomerRefund? refund in uniteNetSuiteCustomerRefunds!)
                         {
                             rowNumber++;
-                            _log?.Information($"\nRecord {rowNumber} of {uniteNetSuiteCreditMemos.Count}: Searching for {creditMemo?.ItemID} - {creditMemo?.DisplayName} in NetSuite");
+                            _log?.Information($"\nRecord {rowNumber} of {uniteNetSuiteCustomerRefunds.Count}: Searching for {refund?.ItemID} - {refund?.DisplayName} in NetSuite");
 
-                            #region Find Credit Note
-                            //Find this refund (credit memo) in NetSuite
-                            NetSuiteCreditMemo? matchedCreditMemo = await GetNetSuiteCreditMemo(creditMemo ?? new NetSuiteCreditMemo());
+                            #region Find Refund
+                            //Find this refund (customer refund) in NetSuite
+                            NetSuiteCustomerRefund? matchedCustomerRefund = await GetNetSuiteCustomerRefund(refund ?? new NetSuiteCustomerRefund());
 
-                            if (matchedCreditMemo?.CreditMemoMatchType == CreditMemoMatchType.ByCourseCode)
-                                _log?.Information($"Refund Found in NetSuite by Course Code with NetSuite Credit Memo Item ID: {matchedCreditMemo?.ID}");
+                            if (matchedCustomerRefund?.CustomerRefundMatchType == CustomerRefundMatchType.ByCourseCode)
+                                _log?.Information($"Refund Found in NetSuite by Course Code with NetSuite Customer Refund Item ID: {matchedCustomerRefund?.ID}");
                             else
                                 _log?.Information($"Refund Not Found in NetSuite");
 
-                            if (matchedCreditMemo?.ID != null)
+                            if (matchedCustomerRefund?.ID != null)
                             {
                                 //Update the ID of the record that came from UNIT-e so it can be used to update the record in NetSuite
-                                if (creditMemo != null)
-                                    creditMemo.ID = matchedCreditMemo?.ID;
+                                if (refund != null)
+                                    refund.ID = matchedCustomerRefund?.ID;
                             }
                             #endregion
 
-                            #region Perform Updates to NetSuite Credit Memo
-                            //Update or add the Credit Memo record in NetSuite
-                            NetSuiteCreditMemo updatedNetSuiteCreditMemo = await UpdateNetSuiteCreditMemo(creditMemo ?? new NetSuiteCreditMemo(), readOnly);
+                            #region Perform Updates to NetSuite Customer Refund
+                            //Update or add the Customer Refund record in NetSuite
+                            NetSuiteCustomerRefund updatedNetSuiteCustomerRefund = await UpdateNetSuiteCustomerRefund(refund ?? new NetSuiteCustomerRefund(), readOnly);
 
                             //Update the ID of the record that came from UNIT-e so it matches the newly inserted record if not updating an existing NetSuite record
-                            if (creditMemo != null)
+                            if (refund != null)
                             {
-                                if (updatedNetSuiteCreditMemo?.RecordActionType == RecordActionType.Insert)
+                                if (updatedNetSuiteCustomerRefund?.RecordActionType == RecordActionType.Insert)
                                 {
                                     //Add the ID of the newly inserted record to the UNIT-e record
-                                    creditMemo.ID = updatedNetSuiteCreditMemo?.ID;
-                                    _log?.Information($"Inserted New NetSuite Credit Memo: {creditMemo?.ID}");
+                                    refund.ID = updatedNetSuiteCustomerRefund?.ID;
+                                    _log?.Information($"Inserted New NetSuite Customer Refund: {refund?.ID}");
                                 }
-                                else if (updatedNetSuiteCreditMemo?.RecordActionType == RecordActionType.Update)
+                                else if (updatedNetSuiteCustomerRefund?.RecordActionType == RecordActionType.Update)
                                 {
-                                    _log?.Information($"Synced Existing NetSuite Credit Memo: {creditMemo?.ID}");
+                                    _log?.Information($"Synced Existing NetSuite Customer Refund: {refund?.ID}");
                                 }
                                 else
                                 {
-                                    _log?.Information($"No Changes Made to NetSuite Credit Memo: {creditMemo?.ID}");
+                                    _log?.Information($"No Changes Made to NetSuite Customer Refund: {refund?.ID}");
                                 }
                             }
                             #endregion
@@ -929,6 +929,19 @@ namespace NetSuiteIntegration.Services
             }).ToList<NetSuiteCreditMemo>();
 
             return netSuiteCreditMemos ?? new List<NetSuiteCreditMemo>();
+        }
+
+        public IList<NetSuiteCustomerRefund> MapUNITeRefundsToNetSuiteCustomerRefunds(IList<UNITeRefund> uniteRefunds)
+        {
+            IList<NetSuiteCustomerRefund>? netSuiteCustomerRefunds = new List<NetSuiteCustomerRefund>();
+
+            //Map UNIT-e Refunds to NetSuite Customer Refunds
+            netSuiteCustomerRefunds = uniteRefunds?.Select(re => new NetSuiteCustomerRefund
+            {
+                ExternalID = $"CRM_{re.CourseCode?.Replace("/", "_")}"
+            }).ToList<NetSuiteCustomerRefund>();
+
+            return netSuiteCustomerRefunds ?? new List<NetSuiteCustomerRefund>();
         }
 
         public NetSuiteSearchParameter AddNetSuiteSearchParameter(Operand? operand, string? fieldName, Operator? op, string? value)
@@ -1603,6 +1616,115 @@ namespace NetSuiteIntegration.Services
                 //_log?.Information($"ReadOnly Mode: No Changes Made to Credit Memo");
                 netSuiteCreditMemo.RecordActionType = RecordActionType.None;
                 return netSuiteCreditMemo ?? new NetSuiteCreditMemo();
+            }
+        }
+
+        public async Task<NetSuiteCustomerRefund> GetNetSuiteCustomerRefund(NetSuiteCustomerRefund netSuiteCustomerRefund)
+        {
+            NetSuiteCustomerRefund? matchedCustomerRefund = new NetSuiteCustomerRefund();
+            IList<NetSuiteSearchParameter> searchParameters = new List<NetSuiteSearchParameter>();
+            NetSuiteSearchParameter param = new NetSuiteSearchParameter();
+            NetSuiteSearchResult? searchResults = new NetSuiteSearchResult();
+
+            //Check if the refund already exists in NetSuite by the course code
+            if (matchedCustomerRefund?.ID == null)
+            {
+                searchParameters = new List<NetSuiteSearchParameter>();
+
+                param = AddNetSuiteSearchParameter(null, "itemID", Operator.IS, netSuiteCustomerRefund?.ItemID);
+                searchParameters.Add(param);
+
+                matchedCustomerRefund = await FindNetSuiteCustomerRefund(searchParameters, CustomerRefundMatchType.ByCourseCode);
+            }
+
+            if (matchedCustomerRefund?.ID == null)
+            {
+                //If no match found then create a new customer refund
+                matchedCustomerRefund = new NetSuiteCustomerRefund();
+                matchedCustomerRefund.CustomerRefundMatchType = CustomerRefundMatchType.NotFound;
+            }
+
+            return matchedCustomerRefund ?? new NetSuiteCustomerRefund();
+        }
+
+        public async Task<NetSuiteCustomerRefund> FindNetSuiteCustomerRefund(IList<NetSuiteSearchParameter>? searchParameters, CustomerRefundMatchType customerRefundMatchType)
+        {
+            NetSuiteSearchResult? searchResults = new NetSuiteSearchResult();
+            NetSuiteCustomerRefund? matchedCustomerRefund = new NetSuiteCustomerRefund();
+
+            try
+            {
+                //Perform the search
+                if (searchParameters == null)
+                    searchParameters = new List<NetSuiteSearchParameter>();
+
+                if (_netsuite != null)
+                    searchResults = await _netsuite.Search<NetSuiteSearchResult>("customerRefund", searchParameters);
+
+                if (searchResults?.Count > 0)
+                {
+                    //Get record details if it matches as should only ever be one match here
+                    if (_netsuite != null)
+                        matchedCustomerRefund = await _netsuite.Get<NetSuiteCustomerRefund>("customerRefund", int.Parse(searchResults?.Items?.FirstOrDefault()?.ID ?? "0"));
+                }
+
+                if (matchedCustomerRefund != null)
+                {
+                    matchedCustomerRefund.CustomerRefundMatchType = customerRefundMatchType;
+                }
+            }
+            catch (Exception ex)
+            {
+                _log?.Error($"Error in FindNetSuiteCustomerRefund: {ex.Message}");
+                matchedCustomerRefund = null;
+            }
+
+            return matchedCustomerRefund ?? new NetSuiteCustomerRefund();
+        }
+
+        public async Task<NetSuiteCustomerRefund> UpdateNetSuiteCustomerRefund(NetSuiteCustomerRefund netSuiteCustomerRefund, bool? readOnly)
+        {
+            if (readOnly != true)
+            {
+                try
+                {
+                    if (int.Parse(netSuiteCustomerRefund?.ID ?? "0") > 0)
+                    {
+                        NetSuiteCustomerRefund? updatedNetSuiteCustomerRefund = new NetSuiteCustomerRefund();
+                        if (_netsuite != null)
+                            updatedNetSuiteCustomerRefund = await _netsuite.Update<NetSuiteCustomerRefund>("customerRefund", int.Parse(netSuiteCustomerRefund?.ID ?? "0"), netSuiteCustomerRefund);
+
+                        if (updatedNetSuiteCustomerRefund != null)
+                            updatedNetSuiteCustomerRefund.RecordActionType = RecordActionType.Update;
+
+                        //_log?.Information($"Synced Existing NetSuite Customer Refund: {updatedNetSuiteCustomerRefund?.ID}");
+                        return updatedNetSuiteCustomerRefund ?? new NetSuiteCustomerRefund();
+                    }
+                    else
+                    {
+                        NetSuiteCustomerRefund? insertedNetSuiteCustomerRefund = new NetSuiteCustomerRefund();
+                        if (_netsuite != null)
+                            insertedNetSuiteCustomerRefund = await _netsuite.Add<NetSuiteCustomerRefund>("customerRefund", netSuiteCustomerRefund);
+
+                        if (insertedNetSuiteCustomerRefund != null)
+                            insertedNetSuiteCustomerRefund.RecordActionType = RecordActionType.Insert;
+
+                        //_log?.Information($"Inserted New NetSuite Customer Refund: {insertedNetSuiteCustomerRefund?.ID}");
+                        return insertedNetSuiteCustomerRefund ?? new NetSuiteCustomerRefund();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _log?.Error($"Error in UpdateNetSuiteCustomerRefund: {ex.Message}");
+                    netSuiteCustomerRefund.RecordActionType = RecordActionType.None;
+                    return netSuiteCustomerRefund ?? new NetSuiteCustomerRefund();
+                }
+            }
+            else
+            {
+                //_log?.Information($"ReadOnly Mode: No Changes Made to Credit Memo");
+                netSuiteCustomerRefund.RecordActionType = RecordActionType.None;
+                return netSuiteCustomerRefund ?? new NetSuiteCustomerRefund();
             }
         }
     }
