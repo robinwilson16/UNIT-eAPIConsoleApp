@@ -14,8 +14,9 @@ namespace NetSuiteIntegration.Services
         ISRSWebServicecs? _unite = unite;
         IFinanceWebService? _netsuite = netsuite;
         ILogger? _log = logger;
+        string? _divider = new string('#', 20);
 
-        public async Task<bool> Process(string? _enrolmentRepGen, string? _courseRepGen, bool? readOnly, bool? firstRecordOnly)
+        public async Task<bool?> Process(ICollection<UNITeRepGen>? repGens, bool? readOnly, bool? firstRecordOnly)
         {
             //Steps
             //1. Get UNIT-e Enrolments in Scope
@@ -49,9 +50,9 @@ namespace NetSuiteIntegration.Services
                 return false;
             }
 
-            if (_enrolmentRepGen == null)
+            if (repGens == null || repGens.Count == 0)
             {
-                _log?.Error("UNIT-e Enrolment Report Reference is null/not specified. This should reference the RepGen Report used to extract the data.");
+                _log?.Error("List of RepGen Reports is null/empty. This should reference the RepGen Reports used to extract the data from UNIT-e.");
                 return false;
             }
 
@@ -61,18 +62,96 @@ namespace NetSuiteIntegration.Services
             if (firstRecordOnly == true)
                 _log?.Information("** Running in First Record Only Mode. Only the first record will be processed (helpful for faster debugging). **");
 
-            //Set up lists of students and enrolments and courses
+            bool? isOK = true;
+
+            //Process the data
+            isOK = await DoImport(repGens, readOnly,firstRecordOnly);
+
+            return isOK;
+        }
+
+        public async Task<bool?> Testing()
+        {
+            //Test function to use to test getting, updating, inserting and deleting a single NetSuite Customer
+
+            NetSuiteCustomer? existingNetSuiteCustomer = await _netsuite.Get<NetSuiteCustomer>("customer", 5753);
+            _log?.Information($"\nNetSuite Customer: {existingNetSuiteCustomer?.EntityID} - {existingNetSuiteCustomer?.FirstName} {existingNetSuiteCustomer?.LastName}");
+
+            //Testing
+            //if (existingNetSuiteCustomer != null)
+            //{
+            //    //Was Nilsson
+            //    existingNetSuiteCustomer.FirstName = "RobinTest";
+            //    existingNetSuiteCustomer.LastName = "WilsonTest";
+
+            //    //If adding clear out IDs
+            //    existingNetSuiteCustomer.ID = null;
+            //    existingNetSuiteCustomer.ExternalID = "999999";
+            //    existingNetSuiteCustomer.EntityID = "999999";
+
+            //    //Clear out sub-elements that reference the other customer otherwise it will lead to an Invalid Value error
+            //    existingNetSuiteCustomer.AddressBook = new NetSuiteCustomerAddressBook();
+            //    existingNetSuiteCustomer.CurrencyList = new NetSuiteCustomerCurrencyList();
+            //    existingNetSuiteCustomer.GroupPricing = new NetSuiteCustomerGroupPricing();
+            //    existingNetSuiteCustomer.ItemPricing = new NetSuiteCustomerItemPricing();
+            //    existingNetSuiteCustomer.SalesTeam = new NetSuiteCustomerSalesTeam();
+            //}
+
+            //Update a record
+            //NetSuiteCustomer? updatedNetSuiteCustomer = await _netsuite.Update<NetSuiteCustomer>("customer", 5753, existingNetSuiteCustomer);
+
+            //Insert a record
+            //NetSuiteCustomer? insertedNetSuiteCustomer = await _netsuite.Add<NetSuiteCustomer>("customer", existingNetSuiteCustomer);
+
+            //Delete a record
+            //bool? isDeleted = await _netsuite.Delete<NetSuiteCustomer>("customer", 111005);
+
+            return true;
+        }
+
+        public async Task<bool?> DoImport(ICollection<UNITeRepGen>? repGens, bool? readOnly, bool? firstRecordOnly)
+        {
+            bool? isOK = true;
+
+            //Get RepGens used to extract the data from UNIT-e
+            string? enrolmentRepGen = repGens?.FirstOrDefault(rg => rg.Type == UNITeRepGenType.Enrolment)?.Reference;
+            string? courseRepGen = repGens?.FirstOrDefault(rg => rg.Type == UNITeRepGenType.Course)?.Reference;
+            string? feeRepGen = repGens?.FirstOrDefault(rg => rg.Type == UNITeRepGenType.Fee)?.Reference;
+            string? refundRepGen = repGens?.FirstOrDefault(rg => rg.Type == UNITeRepGenType.Refund)?.Reference;
+
+            //Process the data
+            isOK = await ProcessEnrolments(enrolmentRepGen, readOnly, firstRecordOnly);
+            isOK = isOK == true ? await ProcessCourses(courseRepGen, readOnly, firstRecordOnly) : isOK;
+            isOK = isOK == true ? await ProcessFees(feeRepGen, readOnly, firstRecordOnly) : isOK;
+            isOK = isOK == true ? await ProcessRefunds(refundRepGen, readOnly, firstRecordOnly) : isOK;
+
+            return isOK;
+        }
+
+        public async Task<bool?> ProcessEnrolments(string? enrolmentRepGen, bool? readOnly, bool? firstRecordOnly)
+        {
+            _log?.Information($"\n{_divider}");
+
+            if (enrolmentRepGen != null && enrolmentRepGen.Length > 0)
+            {
+                _log?.Information($"Processing UNIT-e Enrolments using UNIT-e RepGen Report: \"{enrolmentRepGen}\"");
+            }
+            else
+            {
+                _log?.Error("Enrolment RepGen is null/empty. Skipping Enrolment Import");
+                return true;
+            }
+
+            bool? isOK = true;
+
             IList<UNITeStudent>? uniteStudents = new List<UNITeStudent>();
             IList<UNITeEnrolment>? uniteEnrolments = new List<UNITeEnrolment>();
-            IList<UNITeCourse>? uniteCourses = new List<UNITeCourse>();
             IList<NetSuiteCustomer>? uniteNetSuiteCustomers = new List<NetSuiteCustomer>();
-            IList<NetSuiteNonInventorySaleItem>? uniteNetSuiteNonInventorySaleItems = new List<NetSuiteNonInventorySaleItem>();
 
             try
             {
-                _log?.Information("\nLoading UNIT-e Enrolments...");
-
-                uniteEnrolments = await _unite.ExportReport<List<UNITeEnrolment>>(_enrolmentRepGen ?? "");
+                if (_unite != null)
+                    uniteEnrolments = await _unite.ExportReport<List<UNITeEnrolment>>(enrolmentRepGen ?? "");
 
                 if (uniteEnrolments == null)
                 {
@@ -181,55 +260,39 @@ namespace NetSuiteIntegration.Services
                         }
                     }
                 }
-
-                //NetSuiteCustomer? existingNetSuiteCustomer = await _netsuite.Get<NetSuiteCustomer>("customer", 5753);
-                //_log?.Information($"\nNetSuite Customer: {existingNetSuiteCustomer?.EntityID} - {existingNetSuiteCustomer?.FirstName} {existingNetSuiteCustomer?.LastName}");
-
-
-
-                //Testing
-                //if (existingNetSuiteCustomer != null)
-                //{
-                //    //Was Nilsson
-                //    existingNetSuiteCustomer.FirstName = "RobinTest";
-                //    existingNetSuiteCustomer.LastName = "WilsonTest";
-
-                //    //If adding clear out IDs
-                //    existingNetSuiteCustomer.ID = null;
-                //    existingNetSuiteCustomer.ExternalID = "999999";
-                //    existingNetSuiteCustomer.EntityID = "999999";
-
-                //    //Clear out sub-elements that reference the other customer otherwise it will lead to an Invalid Value error
-                //    existingNetSuiteCustomer.AddressBook = new NetSuiteCustomerAddressBook();
-                //    existingNetSuiteCustomer.CurrencyList = new NetSuiteCustomerCurrencyList();
-                //    existingNetSuiteCustomer.GroupPricing = new NetSuiteCustomerGroupPricing();
-                //    existingNetSuiteCustomer.ItemPricing = new NetSuiteCustomerItemPricing();
-                //    existingNetSuiteCustomer.SalesTeam = new NetSuiteCustomerSalesTeam();
-                //}
-
-                //Update a record
-                //NetSuiteCustomer? updatedNetSuiteCustomer = await _netsuite.Update<NetSuiteCustomer>("customer", 5753, existingNetSuiteCustomer);
-
-                //Insert a record
-                //NetSuiteCustomer? insertedNetSuiteCustomer = await _netsuite.Add<NetSuiteCustomer>("customer", existingNetSuiteCustomer);
-
-                //Delete a record
-                //bool? isDeleted = await _netsuite.Delete<NetSuiteCustomer>("customer", 111005);
-
-                //return true;
-
             }
             catch (Exception ex)
             {
                 _log?.Error($"Error Processing Enrolments: {ex.Message}");
-                return false;
+                isOK = false;
             }
+
+            return isOK;
+        }
+
+        public async Task<bool?> ProcessCourses(string? courseRepGen, bool? readOnly, bool? firstRecordOnly)
+        {
+            _log?.Information($"\n{_divider}");
+
+            if (courseRepGen != null && courseRepGen.Length > 0)
+            {
+                _log?.Information($"Processing UNIT-e Courses using UNIT-e RepGen Report: \"{courseRepGen}\"");
+            }
+            else
+            {
+                _log?.Error("Course RepGen is null/empty. Skipping Course Import");
+                return true;
+            }
+
+            bool? isOK = true;
+
+            IList<UNITeCourse>? uniteCourses = new List<UNITeCourse>();
+            IList<NetSuiteNonInventorySaleItem>? uniteNetSuiteNonInventorySaleItems = new List<NetSuiteNonInventorySaleItem>();
 
             try
             {
-                _log?.Information("\nLoading UNIT-e Courses...");
-
-                uniteCourses = await _unite.ExportReport<List<UNITeCourse>>(_courseRepGen ?? "");
+                if (_unite != null)
+                    uniteCourses = await _unite.ExportReport<List<UNITeCourse>>(courseRepGen ?? "");
 
                 if (uniteCourses == null)
                 {
@@ -301,8 +364,6 @@ namespace NetSuiteIntegration.Services
                                 break;
                         }
                     }
-
-                    return true;
                 }
             }
             catch (Exception ex)
@@ -310,6 +371,22 @@ namespace NetSuiteIntegration.Services
                 _log?.Error($"Error Processing Courses: {ex.Message}");
                 return false;
             }
+
+            return isOK;
+        }
+
+        public async Task<bool?> ProcessFees(string? feeRepGen, bool? readOnly, bool? firstRecordOnly)
+        {
+            bool? isOK = true;
+
+            return isOK;
+        }
+
+        public async Task<bool?> ProcessRefunds(string? refundRepGen, bool? readOnly, bool? firstRecordOnly)
+        {
+            bool? isOK = true;
+
+            return isOK;
         }
 
         public IList<UNITeStudent> GetUNITeStudentsFromEnrolments(IList<UNITeEnrolment> uniteEnrolments)

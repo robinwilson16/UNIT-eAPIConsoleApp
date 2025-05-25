@@ -3,11 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using NetSuiteIntegration.Models;
 
 namespace NetSuiteIntegration.Interfaces
 {
     public interface IProcessService
     {
-        Task<bool> Process(string? enrolmentRepGen, string? courseRepGen, bool? readOnly, bool? firstRecordOnly);
+        Task<bool?> Process(ICollection<UNITeRepGen>? repGens, bool? readOnly, bool? firstRecordOnly);
     }
 }

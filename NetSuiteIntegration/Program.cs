@@ -24,15 +24,20 @@ namespace NetSuiteIntegration
         public static bool CanConnect { get; set; }
         public static string? UNITeAPIToken { get; set; }
         public static bool? UNITeSessionIsValid { get; set; } = false;
+        public static ICollection<UNITeRepGen>? UNITeRepGens { get; set; } = new List<UNITeRepGen>();
         //API must be granted access to these reports in Security and Settings
         public static string? UNITeRepGenForEnrolments { get; set; } = "NetSuiteExportCustomers";
         public static string? UNITeRepGenForCourses { get; set; } = "NetSuiteExportCourses";
-
+        public static string? UNITeRepGenForFees { get; set; } = "NetSuiteExportFees";
+        public static string? UNITeRepGenForRefunds { get; set; } = "NetSuiteExportRefunds";
         public static bool? ReadOnly = true;
         public static bool? FirstRecordOnly = true;
 
         static async Task<int> Main(string[] args)
         {
+            //Get list of RepGen Reports which will be used in the Process Service
+            UNITeRepGens = GetRepGenReports();
+
             string? locale = "en-GB";
             string? productVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString();
 
@@ -114,7 +119,7 @@ namespace NetSuiteIntegration
             log.Information("Start");
 
             //Run main process
-            await process!.Process(UNITeRepGenForEnrolments, UNITeRepGenForCourses, ReadOnly, FirstRecordOnly);
+            await process!.Process(UNITeRepGens, ReadOnly, FirstRecordOnly);
 
 
             #endregion
@@ -128,6 +133,46 @@ namespace NetSuiteIntegration
             //List<StudentHESA> students = await uniteWebService.Find<StudentHESA, StudentHESAParameter>(studentHESAParameter);
 
             return 0;
+        }
+
+        public static ICollection<UNITeRepGen>? GetRepGenReports()
+        {
+            ICollection<UNITeRepGen>? uniteRepGens = new List<UNITeRepGen>();
+
+            //Set up list of RepGens defined above
+            if (UNITeRepGenForEnrolments != null)
+                UNITeRepGens?.Add(new UNITeRepGen
+                {
+                    Type = UNITeRepGenType.Enrolment,
+                    Reference = UNITeRepGenForEnrolments,
+                    Name = "UNITe RepGen for Enrolments"
+                });
+
+            if (UNITeRepGenForCourses != null)
+                UNITeRepGens?.Add(new UNITeRepGen
+                {
+                    Type = UNITeRepGenType.Course,
+                    Reference = UNITeRepGenForCourses,
+                    Name = "UNITe RepGen for Courses"
+                });
+
+            if (UNITeRepGenForFees != null)
+                UNITeRepGens?.Add(new UNITeRepGen
+                {
+                    Type = UNITeRepGenType.Fee,
+                    Reference = UNITeRepGenForFees,
+                    Name = "UNITe RepGen for Fees"
+                });
+
+            if (UNITeRepGenForRefunds != null)
+                UNITeRepGens?.Add(new UNITeRepGen
+                {
+                    Type = UNITeRepGenType.Refund,
+                    Reference = UNITeRepGenForRefunds,
+                    Name = "UNITe RepGen for Refunds"
+                });
+
+            return UNITeRepGens;
         }
     }
 }
