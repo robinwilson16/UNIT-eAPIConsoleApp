@@ -117,12 +117,14 @@ namespace NetSuiteIntegration.Services
             string? enrolmentRepGen = repGens?.FirstOrDefault(rg => rg.Type == UNITeRepGenType.Enrolment)?.Reference;
             string? courseRepGen = repGens?.FirstOrDefault(rg => rg.Type == UNITeRepGenType.Course)?.Reference;
             string? feeRepGen = repGens?.FirstOrDefault(rg => rg.Type == UNITeRepGenType.Fee)?.Reference;
+            string? creditNoteRepGen = repGens?.FirstOrDefault(rg => rg.Type == UNITeRepGenType.CreditNote)?.Reference;
             string? refundRepGen = repGens?.FirstOrDefault(rg => rg.Type == UNITeRepGenType.Refund)?.Reference;
 
             //Process the data
             isOK = await ProcessEnrolments(enrolmentRepGen, readOnly, firstRecordOnly);
             isOK = isOK == true ? await ProcessCourses(courseRepGen, readOnly, firstRecordOnly) : isOK;
             isOK = isOK == true ? await ProcessFees(feeRepGen, readOnly, firstRecordOnly) : isOK;
+            isOK = isOK == true ? await ProcessCreditNotes(creditNoteRepGen, readOnly, firstRecordOnly) : isOK;
             isOK = isOK == true ? await ProcessRefunds(refundRepGen, readOnly, firstRecordOnly) : isOK;
 
             return isOK;
@@ -184,7 +186,7 @@ namespace NetSuiteIntegration.Services
                             _log?.Information($"\nRecord {rowNumber} of {uniteNetSuiteCustomers.Count}: Searching for {uniteNetSuiteCustomer?.LastName}, {uniteNetSuiteCustomer?.FirstName} ({uniteNetSuiteCustomer?.CustEntityClientStudentNo}) in NetSuite");
 
                             #region Find Customer and Related Datasets
-                            //Find this customer in NetSuite
+                            //Find this student (customer) in NetSuite
                             NetSuiteCustomer? matchedCustomer = await GetNetSuiteCustomer(uniteNetSuiteCustomer ?? new NetSuiteCustomer());
 
                             if (matchedCustomer?.CustomerMatchType == CustomerMatchType.ByStudentRef)
@@ -377,14 +379,315 @@ namespace NetSuiteIntegration.Services
 
         public async Task<bool?> ProcessFees(string? feeRepGen, bool? readOnly, bool? firstRecordOnly)
         {
+            _log?.Information($"\n{_divider}");
+
+            if (feeRepGen != null && feeRepGen.Length > 0)
+            {
+                _log?.Information($"Processing UNIT-e Fees using UNIT-e RepGen Report: \"{feeRepGen}\"");
+            }
+            else
+            {
+                _log?.Error("Fee RepGen is null/empty. Skipping Fee Import");
+                return true;
+            }
+
             bool? isOK = true;
+
+            IList<UNITeFee>? uniteFees = new List<UNITeFee>();
+            IList<NetSuiteInvoice>? uniteNetSuiteInvoices = new List<NetSuiteInvoice>();
+
+            try
+            {
+                if (_unite != null)
+                    uniteFees = await _unite.ExportReport<List<UNITeFee>>(feeRepGen ?? "");
+
+                if (uniteFees == null)
+                {
+                    _log?.Information("No UNIT-e Fees found.");
+                    return false;
+                }
+                else if (uniteFees?.Count == 0)
+                {
+                    _log?.Information("No UNIT-e Fees To Be Imported Currently.");
+                    return false;
+                }
+                else
+                {
+                    _log?.Information($"Loaded {uniteFees?.Count} UNIT-e Fees");
+
+                    if (uniteFees != null)
+                        uniteNetSuiteInvoices = MapUNITeFeesToNetSuiteInvoices(uniteFees);
+
+                    if (uniteNetSuiteInvoices != null)
+                    {
+                        int rowNumber = 0;
+                        foreach (NetSuiteInvoice? invoice in uniteNetSuiteInvoices!)
+                        {
+                            rowNumber++;
+                            _log?.Information($"\nRecord {rowNumber} of {uniteNetSuiteInvoices.Count}: Searching for {invoice?.ItemID} - {invoice?.DisplayName} in NetSuite");
+
+                            #region Find Invoice
+                            //Find this fee (invoice) in NetSuite
+                            NetSuiteInvoice? matchedInvoice = await GetNetSuiteInvoice(invoice ?? new NetSuiteInvoice());
+
+                            if (matchedInvoice?.InvoiceMatchType == InvoiceMatchType.ByCourseCode)
+                                _log?.Information($"Fee Found in NetSuite by Course Code with NetSuite Invoice Item ID: {matchedInvoice?.ID}");
+                            else
+                                _log?.Information($"Fee Not Found in NetSuite");
+
+                            if (matchedInvoice?.ID != null)
+                            {
+                                //Update the ID of the record that came from UNIT-e so it can be used to update the record in NetSuite
+                                if (invoice != null)
+                                    invoice.ID = matchedInvoice?.ID;
+                            }
+                            #endregion
+
+                            #region Perform Updates to NetSuite Invoice
+                            //Update or add the Invoice record in NetSuite
+                            NetSuiteInvoice updatedNetSuiteInvoice = await UpdateNetSuiteInvoice(invoice ?? new NetSuiteInvoice(), readOnly);
+
+                            //Update the ID of the record that came from UNIT-e so it matches the newly inserted record if not updating an existing NetSuite record
+                            if (invoice != null)
+                            {
+                                if (updatedNetSuiteInvoice?.RecordActionType == RecordActionType.Insert)
+                                {
+                                    //Add the ID of the newly inserted record to the UNIT-e record
+                                    invoice.ID = updatedNetSuiteInvoice?.ID;
+                                    _log?.Information($"Inserted New NetSuite Invoice: {invoice?.ID}");
+                                }
+                                else if (updatedNetSuiteInvoice?.RecordActionType == RecordActionType.Update)
+                                {
+                                    _log?.Information($"Synced Existing NetSuite Invoice: {invoice?.ID}");
+                                }
+                                else
+                                {
+                                    _log?.Information($"No Changes Made to NetSuite Invoice: {invoice?.ID}");
+                                }
+                            }
+                            #endregion
+
+                            if (firstRecordOnly == true)
+                                break;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _log?.Error($"Error Processing Fees: {ex.Message}");
+                return false;
+            }
+
+            return isOK;
+        }
+
+        public async Task<bool?> ProcessCreditNotes(string? creditNoteRepGen, bool? readOnly, bool? firstRecordOnly)
+        {
+            _log?.Information($"\n{_divider}");
+
+            if (creditNoteRepGen != null && creditNoteRepGen.Length > 0)
+            {
+                _log?.Information($"Processing UNIT-e Credit Notes using UNIT-e RepGen Report: \"{creditNoteRepGen}\"");
+            }
+            else
+            {
+                _log?.Error("Credit Note RepGen is null/empty. Skipping Credit Note Import");
+                return true;
+            }
+
+            bool? isOK = true;
+
+            IList<UNITeCreditNote>? uniteCreditNotes = new List<UNITeCreditNote>();
+            IList<NetSuiteCreditMemo>? uniteNetSuiteCreditMemos = new List<NetSuiteCreditMemo>();
+
+            try
+            {
+                if (_unite != null)
+                    uniteCreditNotes = await _unite.ExportReport<List<UNITeCreditNote>>(creditNoteRepGen ?? "");
+
+                if (uniteCreditNotes == null)
+                {
+                    _log?.Information("No UNIT-e Credit Notes found.");
+                    return false;
+                }
+                else if (uniteCreditNotes?.Count == 0)
+                {
+                    _log?.Information("No UNIT-e Credit Notes To Be Imported Currently.");
+                    return false;
+                }
+                else
+                {
+                    _log?.Information($"Loaded {uniteCreditNotes?.Count} UNIT-e Credit Notes");
+
+                    if (uniteCreditNotes != null)
+                        uniteNetSuiteCreditMemos = MapUNITeCreditNotesToNetSuiteCreditMemos(uniteCreditNotes);
+
+                    if (uniteNetSuiteCreditMemos != null)
+                    {
+                        int rowNumber = 0;
+                        foreach (NetSuiteCreditMemo? creditMemo in uniteNetSuiteCreditMemos!)
+                        {
+                            rowNumber++;
+                            _log?.Information($"\nRecord {rowNumber} of {uniteNetSuiteCreditMemos.Count}: Searching for {creditMemo?.ItemID} - {creditMemo?.DisplayName} in NetSuite");
+
+                            #region Find Credit Note
+                            //Find this credit note (credit memo) in NetSuite
+                            NetSuiteCreditMemo? matchedCreditMemo = await GetNetSuiteCreditMemo(creditMemo ?? new NetSuiteCreditMemo());
+
+                            if (matchedCreditMemo?.CreditMemoMatchType == CreditMemoMatchType.ByCourseCode)
+                                _log?.Information($"Credit Note Found in NetSuite by Course Code with NetSuite Credit Memo Item ID: {matchedCreditMemo?.ID}");
+                            else
+                                _log?.Information($"Credit Note Not Found in NetSuite");
+
+                            if (matchedCreditMemo?.ID != null)
+                            {
+                                //Update the ID of the record that came from UNIT-e so it can be used to update the record in NetSuite
+                                if (creditMemo != null)
+                                    creditMemo.ID = matchedCreditMemo?.ID;
+                            }
+                            #endregion
+
+                            #region Perform Updates to NetSuite Credit Memo
+                            //Update or add the Credit Memo record in NetSuite
+                            NetSuiteCreditMemo updatedNetSuiteCreditMemo = await UpdateNetSuiteCreditMemo(creditMemo ?? new NetSuiteCreditMemo(), readOnly);
+
+                            //Update the ID of the record that came from UNIT-e so it matches the newly inserted record if not updating an existing NetSuite record
+                            if (creditMemo != null)
+                            {
+                                if (updatedNetSuiteCreditMemo?.RecordActionType == RecordActionType.Insert)
+                                {
+                                    //Add the ID of the newly inserted record to the UNIT-e record
+                                    creditMemo.ID = updatedNetSuiteCreditMemo?.ID;
+                                    _log?.Information($"Inserted New NetSuite Credit Memo: {creditMemo?.ID}");
+                                }
+                                else if (updatedNetSuiteCreditMemo?.RecordActionType == RecordActionType.Update)
+                                {
+                                    _log?.Information($"Synced Existing NetSuite Credit Memo: {creditMemo?.ID}");
+                                }
+                                else
+                                {
+                                    _log?.Information($"No Changes Made to NetSuite Credit Memo: {creditMemo?.ID}");
+                                }
+                            }
+                            #endregion
+
+                            if (firstRecordOnly == true)
+                                break;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _log?.Error($"Error Processing Credit Notes: {ex.Message}");
+                return false;
+            }
 
             return isOK;
         }
 
         public async Task<bool?> ProcessRefunds(string? refundRepGen, bool? readOnly, bool? firstRecordOnly)
         {
+            _log?.Information($"\n{_divider}");
+
+            if (refundRepGen != null && refundRepGen.Length > 0)
+            {
+                _log?.Information($"Processing UNIT-e Refunds using UNIT-e RepGen Report: \"{refundRepGen}\"");
+            }
+            else
+            {
+                _log?.Error("Refund RepGen is null/empty. Skipping Refund Import");
+                return true;
+            }
+
             bool? isOK = true;
+
+            IList<UNITeRefund>? uniteRefunds = new List<UNITeRefund>();
+            IList<NetSuiteCreditMemo>? uniteNetSuiteCreditMemos = new List<NetSuiteCreditMemo>();
+
+            try
+            {
+                if (_unite != null)
+                    uniteRefunds = await _unite.ExportReport<List<UNITeRefund>>(refundRepGen ?? "");
+
+                if (uniteRefunds == null)
+                {
+                    _log?.Information("No UNIT-e Refunds found.");
+                    return false;
+                }
+                else if (uniteRefunds?.Count == 0)
+                {
+                    _log?.Information("No UNIT-e Refunds To Be Imported Currently.");
+                    return false;
+                }
+                else
+                {
+                    _log?.Information($"Loaded {uniteRefunds?.Count} UNIT-e Refunds");
+
+                    if (uniteRefunds != null)
+                        uniteNetSuiteCreditMemos = MapUNITeRefundsToNetSuiteCreditMemos(uniteRefunds);
+
+                    if (uniteNetSuiteCreditMemos != null)
+                    {
+                        int rowNumber = 0;
+                        foreach (NetSuiteCreditMemo? creditMemo in uniteNetSuiteCreditMemos!)
+                        {
+                            rowNumber++;
+                            _log?.Information($"\nRecord {rowNumber} of {uniteNetSuiteCreditMemos.Count}: Searching for {creditMemo?.ItemID} - {creditMemo?.DisplayName} in NetSuite");
+
+                            #region Find Credit Note
+                            //Find this refund (credit memo) in NetSuite
+                            NetSuiteCreditMemo? matchedCreditMemo = await GetNetSuiteCreditMemo(creditMemo ?? new NetSuiteCreditMemo());
+
+                            if (matchedCreditMemo?.CreditMemoMatchType == CreditMemoMatchType.ByCourseCode)
+                                _log?.Information($"Refund Found in NetSuite by Course Code with NetSuite Credit Memo Item ID: {matchedCreditMemo?.ID}");
+                            else
+                                _log?.Information($"Refund Not Found in NetSuite");
+
+                            if (matchedCreditMemo?.ID != null)
+                            {
+                                //Update the ID of the record that came from UNIT-e so it can be used to update the record in NetSuite
+                                if (creditMemo != null)
+                                    creditMemo.ID = matchedCreditMemo?.ID;
+                            }
+                            #endregion
+
+                            #region Perform Updates to NetSuite Credit Memo
+                            //Update or add the Credit Memo record in NetSuite
+                            NetSuiteCreditMemo updatedNetSuiteCreditMemo = await UpdateNetSuiteCreditMemo(creditMemo ?? new NetSuiteCreditMemo(), readOnly);
+
+                            //Update the ID of the record that came from UNIT-e so it matches the newly inserted record if not updating an existing NetSuite record
+                            if (creditMemo != null)
+                            {
+                                if (updatedNetSuiteCreditMemo?.RecordActionType == RecordActionType.Insert)
+                                {
+                                    //Add the ID of the newly inserted record to the UNIT-e record
+                                    creditMemo.ID = updatedNetSuiteCreditMemo?.ID;
+                                    _log?.Information($"Inserted New NetSuite Credit Memo: {creditMemo?.ID}");
+                                }
+                                else if (updatedNetSuiteCreditMemo?.RecordActionType == RecordActionType.Update)
+                                {
+                                    _log?.Information($"Synced Existing NetSuite Credit Memo: {creditMemo?.ID}");
+                                }
+                                else
+                                {
+                                    _log?.Information($"No Changes Made to NetSuite Credit Memo: {creditMemo?.ID}");
+                                }
+                            }
+                            #endregion
+
+                            if (firstRecordOnly == true)
+                                break;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _log?.Error($"Error Processing Refunds: {ex.Message}");
+                return false;
+            }
 
             return isOK;
         }
@@ -600,6 +903,32 @@ namespace NetSuiteIntegration.Services
             }).ToList<NetSuiteNonInventorySaleItem>();
 
             return netSuiteNonInventorySaleItems ?? new List<NetSuiteNonInventorySaleItem>();
+        }
+
+        public IList<NetSuiteInvoice> MapUNITeFeesToNetSuiteInvoices(IList<UNITeFee> uniteFees)
+        {
+            IList<NetSuiteInvoice>? netSuiteInvoices = new List<NetSuiteInvoice>();
+
+            //Map UNIT-e Fees to NetSuite Invoices
+            netSuiteInvoices = uniteFees?.Select(inv => new NetSuiteInvoice
+            {
+                ExternalID = $"CRM_{inv.CourseCode?.Replace("/", "_")}"
+            }).ToList<NetSuiteInvoice>();
+
+            return netSuiteInvoices ?? new List<NetSuiteInvoice>();
+        }
+
+        public IList<NetSuiteCreditMemo> MapUNITeCreditNotesToNetSuiteCreditMemos(IList<UNITeCreditNote> uniteCreditNotes)
+        {
+            IList<NetSuiteCreditMemo>? netSuiteCreditMemos = new List<NetSuiteCreditMemo>();
+
+            //Map UNIT-e Credit Notes to NetSuite Credit Memos
+            netSuiteCreditMemos = uniteCreditNotes?.Select(re => new NetSuiteCreditMemo
+            {
+                ExternalID = $"CRM_{re.CourseCode?.Replace("/", "_")}"
+            }).ToList<NetSuiteCreditMemo>();
+
+            return netSuiteCreditMemos ?? new List<NetSuiteCreditMemo>();
         }
 
         public NetSuiteSearchParameter AddNetSuiteSearchParameter(Operand? operand, string? fieldName, Operator? op, string? value)
@@ -970,7 +1299,7 @@ namespace NetSuiteIntegration.Services
 
             if (matchedSaleItem?.ID == null)
             {
-                //If no match found then create a new customer
+                //If no match found then create a new Non-Inventory Sale Item
                 matchedSaleItem = new NetSuiteNonInventorySaleItem();
                 matchedSaleItem.NonInventorySaleItemMatchType = NonInventorySaleItemMatchType.NotFound;
             }
@@ -1056,6 +1385,224 @@ namespace NetSuiteIntegration.Services
                 //_log?.Information($"ReadOnly Mode: No Changes Made to Non-Inventory Sale Item");
                 netSuiteNonInventorySaleItem.RecordActionType = RecordActionType.None;
                 return netSuiteNonInventorySaleItem ?? new NetSuiteNonInventorySaleItem();
+            }
+        }
+
+        public async Task<NetSuiteInvoice> GetNetSuiteInvoice(NetSuiteInvoice netSuiteInvoice)
+        {
+            NetSuiteInvoice? matchedInvoice = new NetSuiteInvoice();
+            IList<NetSuiteSearchParameter> searchParameters = new List<NetSuiteSearchParameter>();
+            NetSuiteSearchParameter param = new NetSuiteSearchParameter();
+            NetSuiteSearchResult? searchResults = new NetSuiteSearchResult();
+
+            //Check if the fee already exists in NetSuite by the course code
+            if (matchedInvoice?.ID == null)
+            {
+                searchParameters = new List<NetSuiteSearchParameter>();
+
+                param = AddNetSuiteSearchParameter(null, "itemID", Operator.IS, netSuiteInvoice?.ItemID);
+                searchParameters.Add(param);
+
+                matchedInvoice = await FindNetSuiteInvoice(searchParameters, InvoiceMatchType.ByCourseCode);
+            }
+
+            if (matchedInvoice?.ID == null)
+            {
+                //If no match found then create a new invoice
+                matchedInvoice = new NetSuiteInvoice();
+                matchedInvoice.InvoiceMatchType = InvoiceMatchType.NotFound;
+            }
+
+            return matchedInvoice ?? new NetSuiteInvoice();
+        }
+
+        public async Task<NetSuiteInvoice> FindNetSuiteInvoice(IList<NetSuiteSearchParameter>? searchParameters, InvoiceMatchType invoiceMatchType)
+        {
+            NetSuiteSearchResult? searchResults = new NetSuiteSearchResult();
+            NetSuiteInvoice? matchedInvoice = new NetSuiteInvoice();
+
+            try
+            {
+                //Perform the search
+                if (searchParameters == null)
+                    searchParameters = new List<NetSuiteSearchParameter>();
+
+                if (_netsuite != null)
+                    searchResults = await _netsuite.Search<NetSuiteSearchResult>("invoice", searchParameters);
+
+                if (searchResults?.Count > 0)
+                {
+                    //Get record details if it matches as should only ever be one match here
+                    if (_netsuite != null)
+                        matchedInvoice = await _netsuite.Get<NetSuiteInvoice>("invoice", int.Parse(searchResults?.Items?.FirstOrDefault()?.ID ?? "0"));
+                }
+
+                if (matchedInvoice != null)
+                {
+                    matchedInvoice.InvoiceMatchType = invoiceMatchType;
+                }
+            }
+            catch (Exception ex)
+            {
+                _log?.Error($"Error in FindNetSuiteInvoice: {ex.Message}");
+                matchedInvoice = null;
+            }
+
+            return matchedInvoice ?? new NetSuiteInvoice();
+        }
+
+        public async Task<NetSuiteInvoice> UpdateNetSuiteInvoice(NetSuiteInvoice netSuiteInvoice, bool? readOnly)
+        {
+            if (readOnly != true)
+            {
+                try
+                {
+                    if (int.Parse(netSuiteInvoice?.ID ?? "0") > 0)
+                    {
+                        NetSuiteInvoice? updatedNetSuiteInvoice = new NetSuiteInvoice();
+                        if (_netsuite != null)
+                            updatedNetSuiteInvoice = await _netsuite.Update<NetSuiteInvoice>("invoice", int.Parse(netSuiteInvoice?.ID ?? "0"), netSuiteInvoice);
+
+                        if (updatedNetSuiteInvoice != null)
+                            updatedNetSuiteInvoice.RecordActionType = RecordActionType.Update;
+
+                        //_log?.Information($"Synced Existing NetSuite Invoice: {updatedNetSuiteInvoice?.ID}");
+                        return updatedNetSuiteInvoice ?? new NetSuiteInvoice();
+                    }
+                    else
+                    {
+                        NetSuiteInvoice? insertedNetSuiteInvoice = new NetSuiteInvoice();
+                        if (_netsuite != null)
+                            insertedNetSuiteInvoice = await _netsuite.Add<NetSuiteInvoice>("invoice", netSuiteInvoice);
+
+                        if (insertedNetSuiteInvoice != null)
+                            insertedNetSuiteInvoice.RecordActionType = RecordActionType.Insert;
+
+                        //_log?.Information($"Inserted New NetSuite Invoice: {insertedNetSuiteInvoice?.ID}");
+                        return insertedNetSuiteInvoice ?? new NetSuiteInvoice();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _log?.Error($"Error in UpdateNetSuiteInvoice: {ex.Message}");
+                    netSuiteInvoice.RecordActionType = RecordActionType.None;
+                    return netSuiteInvoice ?? new NetSuiteInvoice();
+                }
+            }
+            else
+            {
+                //_log?.Information($"ReadOnly Mode: No Changes Made to Invoice");
+                netSuiteInvoice.RecordActionType = RecordActionType.None;
+                return netSuiteInvoice ?? new NetSuiteInvoice();
+            }
+        }
+
+        public async Task<NetSuiteCreditMemo> GetNetSuiteCreditMemo(NetSuiteCreditMemo netSuiteCreditMemo)
+        {
+            NetSuiteCreditMemo? matchedCreditMemo = new NetSuiteCreditMemo();
+            IList<NetSuiteSearchParameter> searchParameters = new List<NetSuiteSearchParameter>();
+            NetSuiteSearchParameter param = new NetSuiteSearchParameter();
+            NetSuiteSearchResult? searchResults = new NetSuiteSearchResult();
+
+            //Check if the credit note already exists in NetSuite by the course code
+            if (matchedCreditMemo?.ID == null)
+            {
+                searchParameters = new List<NetSuiteSearchParameter>();
+
+                param = AddNetSuiteSearchParameter(null, "itemID", Operator.IS, netSuiteCreditMemo?.ItemID);
+                searchParameters.Add(param);
+
+                matchedCreditMemo = await FindNetSuiteCreditMemo(searchParameters, CreditMemoMatchType.ByCourseCode);
+            }
+
+            if (matchedCreditMemo?.ID == null)
+            {
+                //If no match found then create a new invoice
+                matchedCreditMemo = new NetSuiteCreditMemo();
+                matchedCreditMemo.CreditMemoMatchType = CreditMemoMatchType.NotFound;
+            }
+
+            return matchedCreditMemo ?? new NetSuiteCreditMemo();
+        }
+
+        public async Task<NetSuiteCreditMemo> FindNetSuiteCreditMemo(IList<NetSuiteSearchParameter>? searchParameters, CreditMemoMatchType creditMemoMatchType)
+        {
+            NetSuiteSearchResult? searchResults = new NetSuiteSearchResult();
+            NetSuiteCreditMemo? matchedCreditMemo = new NetSuiteCreditMemo();
+
+            try
+            {
+                //Perform the search
+                if (searchParameters == null)
+                    searchParameters = new List<NetSuiteSearchParameter>();
+
+                if (_netsuite != null)
+                    searchResults = await _netsuite.Search<NetSuiteSearchResult>("creditMemo", searchParameters);
+
+                if (searchResults?.Count > 0)
+                {
+                    //Get record details if it matches as should only ever be one match here
+                    if (_netsuite != null)
+                        matchedCreditMemo = await _netsuite.Get<NetSuiteCreditMemo>("creditMemo", int.Parse(searchResults?.Items?.FirstOrDefault()?.ID ?? "0"));
+                }
+
+                if (matchedCreditMemo != null)
+                {
+                    matchedCreditMemo.CreditMemoMatchType = creditMemoMatchType;
+                }
+            }
+            catch (Exception ex)
+            {
+                _log?.Error($"Error in FindNetSuiteCreditMemo: {ex.Message}");
+                matchedCreditMemo = null;
+            }
+
+            return matchedCreditMemo ?? new NetSuiteCreditMemo();
+        }
+
+        public async Task<NetSuiteCreditMemo> UpdateNetSuiteCreditMemo(NetSuiteCreditMemo netSuiteCreditMemo, bool? readOnly)
+        {
+            if (readOnly != true)
+            {
+                try
+                {
+                    if (int.Parse(netSuiteCreditMemo?.ID ?? "0") > 0)
+                    {
+                        NetSuiteCreditMemo? updatedNetSuiteCreditMemo = new NetSuiteCreditMemo();
+                        if (_netsuite != null)
+                            updatedNetSuiteCreditMemo = await _netsuite.Update<NetSuiteCreditMemo>("creditMemo", int.Parse(netSuiteCreditMemo?.ID ?? "0"), netSuiteCreditMemo);
+
+                        if (updatedNetSuiteCreditMemo != null)
+                            updatedNetSuiteCreditMemo.RecordActionType = RecordActionType.Update;
+
+                        //_log?.Information($"Synced Existing NetSuite Credit Memo: {updatedNetSuiteCreditMemo?.ID}");
+                        return updatedNetSuiteCreditMemo ?? new NetSuiteCreditMemo();
+                    }
+                    else
+                    {
+                        NetSuiteCreditMemo? insertedNetSuiteCreditMemo = new NetSuiteCreditMemo();
+                        if (_netsuite != null)
+                            insertedNetSuiteCreditMemo = await _netsuite.Add<NetSuiteCreditMemo>("creditMemo", netSuiteCreditMemo);
+
+                        if (insertedNetSuiteCreditMemo != null)
+                            insertedNetSuiteCreditMemo.RecordActionType = RecordActionType.Insert;
+
+                        //_log?.Information($"Inserted New NetSuite Credit Memo: {insertedNetSuiteCreditMemo?.ID}");
+                        return insertedNetSuiteCreditMemo ?? new NetSuiteCreditMemo();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _log?.Error($"Error in UpdateNetSuiteCreditMemo: {ex.Message}");
+                    netSuiteCreditMemo.RecordActionType = RecordActionType.None;
+                    return netSuiteCreditMemo ?? new NetSuiteCreditMemo();
+                }
+            }
+            else
+            {
+                //_log?.Information($"ReadOnly Mode: No Changes Made to Credit Memo");
+                netSuiteCreditMemo.RecordActionType = RecordActionType.None;
+                return netSuiteCreditMemo ?? new NetSuiteCreditMemo();
             }
         }
     }

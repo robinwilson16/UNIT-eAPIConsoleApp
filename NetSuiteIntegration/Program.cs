@@ -29,6 +29,7 @@ namespace NetSuiteIntegration
         public static string? UNITeRepGenForEnrolments { get; set; } = "NetSuiteExportCustomers";
         public static string? UNITeRepGenForCourses { get; set; } = "NetSuiteExportCourses";
         public static string? UNITeRepGenForFees { get; set; } = "NetSuiteExportFees";
+        public static string? UNITeRepGenForCreditNotes { get; set; } = "NetSuiteExportCreditNotes";
         public static string? UNITeRepGenForRefunds { get; set; } = "NetSuiteExportRefunds";
         public static bool? ReadOnly = true;
         public static bool? FirstRecordOnly = true;
@@ -162,6 +163,14 @@ namespace NetSuiteIntegration
                     Type = UNITeRepGenType.Fee,
                     Reference = UNITeRepGenForFees,
                     Name = "UNITe RepGen for Fees"
+                });
+
+            if (UNITeRepGenForCreditNotes != null)
+                UNITeRepGens?.Add(new UNITeRepGen
+                {
+                    Type = UNITeRepGenType.CreditNote,
+                    Reference = UNITeRepGenForCreditNotes,
+                    Name = "UNITe RepGen for Credit Notes"
                 });
 
             if (UNITeRepGenForRefunds != null)

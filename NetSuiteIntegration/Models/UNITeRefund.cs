@@ -1,0 +1,341 @@
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Globalization;
+using System.Linq;
+using System.Text;
+using System.Text.Json.Serialization;
+using System.Threading.Tasks;
+
+namespace NetSuiteIntegration.Models
+{
+    public class UNITeRefund
+    {
+        [Key]
+        [Column(TypeName = "decimal(16,0)")]
+        public decimal EnrolmentID { get; set; }
+        [Column(TypeName = "decimal(16,0)")]
+        public decimal? StudentID { get; set; }
+        public string? StudentRef { get; set; }
+        public string? ExternalRef { get; set; }
+        public string? ERPID { get; set; }
+        public string? Surname { get; set; }
+        public string? Forename { get; set; }
+        public string? PreferredName { get; set; }
+        public string? TitleCode { get; set; }
+        public string? TitleName { get; set; }
+        public string? GenderCode { get; set; }
+        public string? GenderName { get; set; }
+        public DateTime? DateOfBirth { get; set; }
+        public string? UCASPersonalID { get; set; }
+
+        [MaxLength(10)]
+        public string? ULN { get; set; }
+
+        [JsonIgnore]
+        public int? uLN
+        {
+            get {
+                int.TryParse(ULN, out int ulnInt);
+                return ULN == null ? null : ulnInt;
+            }
+        }
+        public string? AddressMain { get; set; }
+        public string? Address1Main
+        {
+            get
+            {
+                if (AddressMain != null)
+                {
+                    string[] addressParts = AddressMain.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    return addressParts.Length > 0 ? addressParts[0] : null;
+                }
+                return null;
+            }
+        }
+        public string? Address2Main
+        {
+            get
+            {
+                if (AddressMain != null)
+                {
+                    string[] addressParts = AddressMain.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    return addressParts.Length > 1 ? addressParts[1] : null;
+                }
+                return null;
+            }
+        }
+        public string? Address3Main
+        {
+            get
+            {
+                if (AddressMain != null)
+                {
+                    string[] addressParts = AddressMain.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    return addressParts.Length > 2 ? addressParts[2] : null;
+                }
+                return null;
+            }
+        }
+        public string? Address4Main
+        {
+            get
+            {
+                if (AddressMain != null)
+                {
+                    string[] addressParts = AddressMain.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    return addressParts.Length > 3 ? addressParts[3] : null;
+                }
+                return null;
+            }
+        }
+        public string? Address5Main
+        {
+            get
+            {
+                if (AddressMain != null)
+                {
+                    string[] addressParts = AddressMain.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    return addressParts.Length > 4 ? addressParts[4] : null;
+                }
+                return null;
+            }
+        }
+        public string? CountryCodeMain { get; set; }
+        public string? CountryNameMain { get; set; }
+        public string? AddressMainType { get; set; }
+        [MaxLength(8)]
+        public string? PostCodeMain { get; set; }
+        public string? AddressTermTime { get; set; }
+        public string? Address1TermTime
+        {
+            get
+            {
+                if (AddressTermTime != null)
+                {
+                    string[] addressParts = AddressTermTime.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    return addressParts.Length > 0 ? addressParts[0] : null;
+                }
+                return null;
+            }
+        }
+        public string? Address2TermTime
+        {
+            get
+            {
+                if (AddressTermTime != null)
+                {
+                    string[] addressParts = AddressTermTime.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    return addressParts.Length > 1 ? addressParts[1] : null;
+                }
+                return null;
+            }
+        }
+        public string? Address3TermTime
+        {
+            get
+            {
+                if (AddressTermTime != null)
+                {
+                    string[] addressParts = AddressTermTime.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    return addressParts.Length > 2 ? addressParts[2] : null;
+                }
+                return null;
+            }
+        }
+        public string? Address4TermTime
+        {
+            get
+            {
+                if (AddressTermTime != null)
+                {
+                    string[] addressParts = AddressTermTime.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    return addressParts.Length > 3 ? addressParts[3] : null;
+                }
+                return null;
+            }
+        }
+        public string? Address5TermTime
+        {
+            get
+            {
+                if (AddressTermTime != null)
+                {
+                    string[] addressParts = AddressTermTime.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    return addressParts.Length > 4 ? addressParts[4] : null;
+                }
+                return null;
+            }
+        }
+        public string? CountryCodeTermTime { get; set; }
+        public string? CountryNameTermTime { get; set; }
+        [MaxLength(8)]
+        public string? PostCodeTermTime { get; set; }
+        public string? AddressHome { get; set; }
+        public string? Address1Home
+        {
+            get
+            {
+                if (AddressHome != null)
+                {
+                    string[] addressParts = AddressHome.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    return addressParts.Length > 0 ? addressParts[0] : null;
+                }
+                return null;
+            }
+        }
+        public string? Address2Home
+        {
+            get
+            {
+                if (AddressHome != null)
+                {
+                    string[] addressParts = AddressHome.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    return addressParts.Length > 1 ? addressParts[1] : null;
+                }
+                return null;
+            }
+        }
+        public string? Address3Home
+        {
+            get
+            {
+                if (AddressHome != null)
+                {
+                    string[] addressParts = AddressHome.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    return addressParts.Length > 2 ? addressParts[2] : null;
+                }
+                return null;
+            }
+        }
+        public string? Address4Home
+        {
+            get
+            {
+                if (AddressHome != null)
+                {
+                    string[] addressParts = AddressHome.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    return addressParts.Length > 3 ? addressParts[3] : null;
+                }
+                return null;
+            }
+        }
+        public string? Address5Home
+        {
+            get
+            {
+                if (AddressHome != null)
+                {
+                    string[] addressParts = AddressHome.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    return addressParts.Length > 4 ? addressParts[4] : null;
+                }
+                return null;
+            }
+        }
+        public string? CountryCodeHome { get; set; }
+        public string? CountryNameHome { get; set; }
+        [MaxLength(8)]
+        public string? PostCodeHome { get; set; }
+        public string? AddressInvoice { get; set; }
+        public string? Address1Invoice
+        {
+            get
+            {
+                if (AddressInvoice != null)
+                {
+                    string[] addressParts = AddressInvoice.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    return addressParts.Length > 0 ? addressParts[0] : null;
+                }
+                return null;
+            }
+        }
+        public string? Address2Invoice
+        {
+            get
+            {
+                if (AddressInvoice != null)
+                {
+                    string[] addressParts = AddressInvoice.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    return addressParts.Length > 1 ? addressParts[1] : null;
+                }
+                return null;
+            }
+        }
+        public string? Address3Invoice
+        {
+            get
+            {
+                if (AddressInvoice != null)
+                {
+                    string[] addressParts = AddressInvoice.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    return addressParts.Length > 2 ? addressParts[2] : null;
+                }
+                return null;
+            }
+        }
+        public string? Address4Invoice
+        {
+            get
+            {
+                if (AddressInvoice != null)
+                {
+                    string[] addressParts = AddressInvoice.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    return addressParts.Length > 3 ? addressParts[3] : null;
+                }
+                return null;
+            }
+        }
+        public string? Address5Invoice
+        {
+            get
+            {
+                if (AddressInvoice != null)
+                {
+                    string[] addressParts = AddressInvoice.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                    return addressParts.Length > 4 ? addressParts[4] : null;
+                }
+                return null;
+            }
+        }
+        public string? CountryCodeInvoice { get; set; }
+        public string? CountryNameInvoice { get; set; }
+        [MaxLength(8)]
+        public string? PostCodeInvoice { get; set; }
+        public string? EmailAddress { get; set; }
+        public string? Mobile { get; set; }
+        public string? HomePhone { get; set; }
+        public string? AcademicYearCode { get; set; }
+        public string? AcademicYearName { get; set; }
+        [Column(TypeName = "decimal(16,0)")]
+        public decimal? CourseID { get; set; }
+        public string? CampusCode { get; set; }
+        public string? CampusName { get; set; }
+        public string? DepartmentCode { get; set; }
+        public string? DepartmentName { get; set; }
+        public string? CourseCode { get; set; }
+        public string? CourseTitle { get; set; }
+        public string? CourseTypeCode { get; set; }
+        public string? CourseTypeName { get; set; }
+        public string? SubjectCode { get; set; }
+        public string? SubjectName { get; set; }
+        public string? LevelCode { get; set; }
+        public string? LevelName { get; set; }
+        public DateTime? StartDateEnrol { get; set; }
+        public DateTime? ExpectedEndDateEnrol { get; set; }
+        public DateTime? ActualEndDateEnrol { get; set; }
+        public DateTime? StartDateCourse { get; set; }
+        public DateTime? EndDateCourse { get; set; }
+        public string? EnrolmentStatusCode { get; set; }
+        public string? EnrolmentStatusName { get; set; }
+        public string? ProgressionCode { get; set; }
+        public string? ProgressionName { get; set; }
+        public string? ProgressionCourseCode { get; set; }
+        [Column(TypeName = "decimal(19,4)")]
+        [DataType(DataType.Currency)]
+        public decimal? FeeNet { get; set; }
+        [Column(TypeName = "decimal(19,4)")]
+        [DataType(DataType.Currency)]
+        public decimal? FeeGross { get; set; }
+    }
+}

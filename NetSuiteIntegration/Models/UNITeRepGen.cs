@@ -20,6 +20,7 @@ namespace NetSuiteIntegration.Models
         Enrolment,
         Course,
         Fee,
+        CreditNote,
         Refund
     }
 }
