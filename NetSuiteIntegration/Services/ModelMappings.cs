@@ -272,7 +272,7 @@ namespace NetSuiteIntegration.Services
                     ID = "1",
                     RefName = "GBP"
                 },
-                Custbody15699ExcludeFromEpProcess = false,
+                Custbody15699ExcludeFromEPProcess = false,
                 CustbodyAtlasExistCustHdn = new NetSuiteInvoiceCustbodyAtlasExistCustHdn
                 {
                     ID = "2",
@@ -365,8 +365,7 @@ namespace NetSuiteIntegration.Services
                 },
                 Subsidiary = new NetSuiteInvoiceSubsidiary
                 {
-                    ID = "45",
-                    RefName = "BIMM University Limited"
+                    RefName = inv.CampusName
                 },
                 Subtotal = decimal.ToDouble(inv.FeeGross ?? 0),
                 ToBeEmailed = false,
@@ -394,7 +393,131 @@ namespace NetSuiteIntegration.Services
             //Map UNIT-e Credit Notes to NetSuite Credit Memos
             netSuiteCreditMemos = uniteCreditNotes?.Select(re => new NetSuiteCreditMemo
             {
-                ExternalID = $"CRM_{re.CourseCode?.Replace("/", "_")}"
+                Account = new NetSuiteCreditMemoAccount
+                {
+                    ID = "456",
+                    RefName = "20709 Debtors Control Account"
+                },
+                AmountPaid = 0,
+                AmountRemaining = decimal.ToDouble(re.FeeGross ?? 0),
+                Applied = 0,
+                AsOfDate = re.ActualEndDateEnrol?.Format("yyyy-MM-dd"),
+                BillAddress = re.AddressMainEncoded,
+                BillAddressList = new NetSuiteCreditMemoBillAddressList
+                {
+                    RefName = re.AddressMainType
+                },
+                BillingAddressText = re.AddressMainEncoded,
+                CanHaveStackable = false,
+                Class = new NetSuiteCreditMemoClass
+                {
+                    RefName = $"{re.SubjectName}: {re.CampusName}"
+                },
+                CreatedDate = DateTime.Now,
+                Currency = new NetSuiteCreditMemoCurrency
+                {
+                    ID = "1",
+                    RefName = "GBP"
+                },
+                Custbody15699ExcludeFromEPProcess = false,
+                CustbodyAtlasExistCustHdn = new NetSuiteCreditMemoCustbodyAtlasExistCustHdn
+                {
+                    ID = "2",
+                    RefName = "Existing Customer"
+                },
+                CustbodyAtlasNewCustHdn = new NetSuiteCreditMemoCustbodyAtlasNewCustHdn
+                {
+                    ID = "1",
+                    RefName = "New Customer"
+                },
+                CustbodyAtlasNoHdn = new NetSuiteCreditMemoCustbodyAtlasNoHdn
+                {
+                    ID = "2",
+                    RefName = "No"
+                },
+                CustbodyAtlasYesHdn = new NetSuiteCreditMemoCustbodyAtlasYesHdn
+                {
+                    ID = "1",
+                    RefName = "Yes"
+                },
+                CustbodyEmeaTransactionType = "custcred",
+                CustbodyEscCreatedDate = DateTime.Now.Format("yyyy-MM-dd"),
+                CustbodyExternalID = $"ENR_{re.EnrolmentID.ToString()}",
+                CustbodyF3IntercompanyInternalVb = new NetSuiteCreditMemoCustbodyF3IntercompanyInternalVb
+                {
+                    ID = "2",
+                    RefName = "No"
+                },
+                CustbodyReportTimestamp = DateTime.Now.Format("yyyy-MM-ddTHH:mm:ssZ"),
+                CustbodySiiArticle61d = false,
+                CustbodySiiArticle7273 = false,
+                CustbodySiiIsThirdParty = false,
+                CustbodySiiNotReportedInTime = false,
+                CustbodyZncGbpEquivNet = decimal.ToDouble(re.FeeGross ?? 0),
+                CustbodyZncGbpEquivTotal = decimal.ToDouble(re.FeeGross ?? 0),
+                CustbodyZncGbpEquivVat = 0,
+                CustomForm = new NetSuiteCreditMemoCustomForm
+                {
+                    ID = "210",
+                    RefName = "BIMM - Credit Memo"
+                },
+                Department = new NetSuiteCreditMemoDepartment
+                {
+                    ID = "26",
+                    RefName = "Income : Student Income"
+                },
+                DiscountTotal = 0,
+                Email = re.EmailAddress,
+                Entity = new NetSuiteCreditMemoEntity
+                {
+                    ID = re.NetSuiteCustomerID.ToString() //Ensure NetSuite Customer ID has been assigned to the UNIT-e Instance
+                },
+                EstGrossProfit = decimal.ToDouble(re.FeeGross ?? 0),
+                EstGrossProfitPercent = 100.0,
+                ExchangeRate = 1.0,
+                ExcludeFromGLNumbering = false,
+                ExternalID = $"ENR_{re.EnrolmentID.ToString()}",
+                Location = new NetSuiteCreditMemoLocation
+                {
+                    RefName = re.CampusName
+                },
+                Memo = $"{re.CourseCode}, CREDIT_TUT_GBP, {(re.Forename?.Length >= 3? re.Forename?.Substring(0, 3) : re.Forename)}{(re.Surname?.Length >= 3 ? re.Surname?.Substring(0, 3) : re.Surname)}, UNIT-e Ref={re.StudentRef}",
+                Originator = "UNIT-e",
+                PostingPeriod = new NetSuiteCreditMemoPostingPeriod
+                {
+                    RefName = re.ActualEndDateEnrol?.Format("MMM yyyy"),
+                },
+                PrevDate = re.ActualEndDateEnrol?.Format("yyyy-MM-dd"),
+                SalesEffectiveDate = re.ActualEndDateEnrol?.Format("yyyy-MM-dd"),
+                ShipAddress = re.AddressMainEncoded,
+                ShipAddressList = new NetSuiteCreditMemoShipAddressList
+                {
+                    RefName = re.AddressMainType
+                },
+                ShipIsResidential = true,
+                ShipOverride = false,
+                ShippingAddressText = re.AddressMainEncoded,
+                Source = new NetSuiteCreditMemoSource
+                {
+                    RefName = "UNIT-e"
+                },
+                Status = new NetSuiteCreditMemoStatus
+                {
+                    ID = "Open",
+                    RefName = "Open"
+                },
+                Subsidiary = new NetSuiteCreditMemoSubsidiary
+                {
+                    RefName = re.CampusName
+                },
+                Subtotal = decimal.ToDouble(re.FeeGross ?? 0),
+                ToBeEmailed = false,
+                ToBeFaxed = false,
+                ToBePrinted = false,
+                Total = decimal.ToDouble(re.FeeGross ?? 0),
+                TotalCostEstimate = 0,
+                TranDate = re.ActualEndDateEnrol?.Format("yyyy-MM-dd"),
+                Unapplied = decimal.ToDouble(re.FeeGross ?? 0)
             }).ToList<NetSuiteCreditMemo>();
 
             return netSuiteCreditMemos ?? new List<NetSuiteCreditMemo>();

@@ -27,7 +27,7 @@ namespace NetSuiteIntegration.Models
         public DateTime? CreatedDate { get; set; }
         public NetSuiteInvoiceCurrency? Currency { get; set; }
         [JsonPropertyName("custbody_15699_exclude_from_ep_process")]
-        public bool? Custbody15699ExcludeFromEpProcess { get; set; }
+        public bool? Custbody15699ExcludeFromEPProcess { get; set; }
         [JsonPropertyName("custbody_atlas_exist_cust_hdn")]
         public NetSuiteInvoiceCustbodyAtlasExistCustHdn? CustbodyAtlasExistCustHdn { get; set; }
         [JsonPropertyName("custbody_atlas_new_cust_hdn")]
