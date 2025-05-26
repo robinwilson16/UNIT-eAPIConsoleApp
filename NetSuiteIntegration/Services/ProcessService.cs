@@ -159,12 +159,12 @@ namespace NetSuiteIntegration.Services
                 if (uniteEnrolments == null)
                 {
                     _log?.Information("No UNIT-e Enrolments found.");
-                    return false;
+                    return true;
                 }
                 else if (uniteEnrolments?.Count == 0)
                 {
                     _log?.Information("No UNIT-e Enrolments To Be Imported Currently.");
-                    return false;
+                    return true;
                 }
                 else
                 {
@@ -300,12 +300,12 @@ namespace NetSuiteIntegration.Services
                 if (uniteCourses == null)
                 {
                     _log?.Information("No UNIT-e Courses found.");
-                    return false;
+                    return true;
                 }
                 else if (uniteCourses?.Count == 0)
                 {
                     _log?.Information("No UNIT-e Courses To Be Imported Currently.");
-                    return false;
+                    return true;
                 }
                 else
                 {
@@ -405,12 +405,12 @@ namespace NetSuiteIntegration.Services
                 if (uniteFees == null)
                 {
                     _log?.Information("No UNIT-e Fees found.");
-                    return false;
+                    return true;
                 }
                 else if (uniteFees?.Count == 0)
                 {
                     _log?.Information("No UNIT-e Fees To Be Imported Currently.");
-                    return false;
+                    return true;
                 }
                 else
                 {
@@ -510,12 +510,12 @@ namespace NetSuiteIntegration.Services
                 if (uniteCreditNotes == null)
                 {
                     _log?.Information("No UNIT-e Credit Notes found.");
-                    return false;
+                    return true;
                 }
                 else if (uniteCreditNotes?.Count == 0)
                 {
                     _log?.Information("No UNIT-e Credit Notes To Be Imported Currently.");
-                    return false;
+                    return true;
                 }
                 else
                 {
@@ -615,12 +615,12 @@ namespace NetSuiteIntegration.Services
                 if (uniteRefunds == null)
                 {
                     _log?.Information("No UNIT-e Refunds found.");
-                    return false;
+                    return true;
                 }
                 else if (uniteRefunds?.Count == 0)
                 {
                     _log?.Information("No UNIT-e Refunds To Be Imported Currently.");
-                    return false;
+                    return true;
                 }
                 else
                 {

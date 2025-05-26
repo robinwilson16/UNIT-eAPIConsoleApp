@@ -47,7 +47,7 @@ namespace NetSuiteIntegration.Services
                 else
                 {
                     string? errorMessage = response.Content.ReadAsStringAsync().Result;
-                    _Log.Error($"Failed to get the {objectType} record {objectID} due to error {errorMessage}");
+                    _Log.Error($"Failed to get the {objectType} record {objectID} due to error ({response.StatusCode}): {errorMessage}");
                     return default(T);
                 }
             }
@@ -84,7 +84,7 @@ namespace NetSuiteIntegration.Services
                 else
                 {
                     string? errorMessage = response.Content.ReadAsStringAsync().Result;
-                    _Log.Error($"Failed to get the {objectType} records due to error {errorMessage}");
+                    _Log.Error($"Failed to get the {objectType} records due to error ({response.StatusCode}): {errorMessage}");
                     return default(T);
                 }
             }
@@ -223,7 +223,7 @@ namespace NetSuiteIntegration.Services
                 else
                 {
                     string? errorMessage = response.Content.ReadAsStringAsync().Result;
-                    _Log.Error($"Failed to get the {objectType} records due to error {errorMessage}");
+                    _Log.Error($"Failed to get the {objectType} records due to error ({response.StatusCode}): {errorMessage}");
                     return default(T);
                 }
             }
@@ -266,7 +266,7 @@ namespace NetSuiteIntegration.Services
                 else
                 {
                     string? errorMessage = response.Content.ReadAsStringAsync().Result;
-                    _Log.Error($"Failed to add the new {objectType} record due to error {errorMessage}");
+                    _Log.Error($"Failed to add the new {objectType} record due to error ({response.StatusCode}): {errorMessage}");
                     return default(T);
                 }
             }
@@ -321,7 +321,7 @@ namespace NetSuiteIntegration.Services
                 else
                 {
                     string? errorMessage = response.Content.ReadAsStringAsync().Result;
-                    _Log.Error($"Failed to update the {objectType} record {objectID} due to error {errorMessage}");
+                    _Log.Error($"Failed to update the {objectType} record {objectID} due to error ({response.StatusCode}): {errorMessage}");
                     return default(T);
                 }
             }
@@ -366,7 +366,7 @@ namespace NetSuiteIntegration.Services
                 else
                 {
                     string? errorMessage = response.Content.ReadAsStringAsync().Result;
-                    _Log.Error($"Failed to update the {objectType} record {objectID} due to error {errorMessage}");
+                    _Log.Error($"Failed to update the {objectType} record {objectID} due to error ({response.StatusCode}): {errorMessage}");
                     return false;
                 }
             }

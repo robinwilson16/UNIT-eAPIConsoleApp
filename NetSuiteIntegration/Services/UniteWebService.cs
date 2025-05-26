@@ -3,6 +3,7 @@ using NetSuiteIntegration.Models;
 //using Newtonsoft.Json;
 using Serilog;
 using System.Data;
+using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
@@ -59,7 +60,7 @@ namespace NetSuiteIntegration.Services
                 else
                 {
                     string? errorMessage = response.Content.ReadAsStringAsync().Result;
-                    _Log.Error($"Failed to invalidate session due to error {errorMessage}");
+                    _Log.Error($"Failed to invalidate session due to error ({response.StatusCode}): {errorMessage}");
                     return false;
                 }
             }
@@ -89,7 +90,14 @@ namespace NetSuiteIntegration.Services
                 HttpResponseMessage response = await _httpClient.GetAsync($"report/export/json/{reportName}");
                 await InvalidateSession(guid);
 
-                if (response.IsSuccessStatusCode)
+
+                if (response.StatusCode == HttpStatusCode.NotFound)
+                {
+                    //If no records then this is not necessarily an error
+                    _Log.Information($"No records found for report {reportName}. Skipping.");
+                    return default;
+                }
+                else if (response.IsSuccessStatusCode)
                 {
                     reportData = await response.Content.ReadFromJsonAsync<T>();
                     return reportData;
@@ -97,7 +105,7 @@ namespace NetSuiteIntegration.Services
                 else
                 {
                     string? errorMessage = response.Content.ReadAsStringAsync().Result;
-                    _Log.Error($"Failed to export report {reportName} due to error {errorMessage}");
+                    _Log.Error($"Failed to export report {reportName} due to error ({response.StatusCode}): {errorMessage}");
                     return default;
                 }
             }
@@ -131,7 +139,13 @@ namespace NetSuiteIntegration.Services
                 HttpResponseMessage response = await _httpClient.GetAsync($"report/export/json/{reportName}");
                 //await InvalidateSession(guid);
 
-                if (response.IsSuccessStatusCode)
+                if (response.StatusCode == HttpStatusCode.NotFound)
+                {
+                    //If no records then this is not necessarily an error
+                    _Log.Information($"No records found for report {reportName}. Skipping.");
+                    return default;
+                }
+                else if (response.IsSuccessStatusCode)
                 {
                     reportData = await response.Content.ReadFromJsonAsync<T>();
                     return reportData;
@@ -139,7 +153,7 @@ namespace NetSuiteIntegration.Services
                 else
                 {
                     string? errorMessage = response.Content.ReadAsStringAsync().Result;
-                    _Log.Error($"Failed to export report {reportName} due to error {errorMessage}");
+                    _Log.Error($"Failed to export report {reportName} due to error ({response.StatusCode}): {errorMessage}");
                     return default;
                 }
             }
@@ -181,7 +195,7 @@ namespace NetSuiteIntegration.Services
                 else
                 {
                     string? errorMessage = response.Content.ReadAsStringAsync().Result;
-                    _Log.Error($"Failed to export report {reportName} due to error {errorMessage}");
+                    _Log.Error($"Failed to export report {reportName} due to error ({response.StatusCode}): {errorMessage}");
                     return default;
                 }
             }
@@ -240,7 +254,7 @@ namespace NetSuiteIntegration.Services
                 else
                 {
                     string? errorMessage = response.Content.ReadAsStringAsync().Result;
-                    _Log.Error($"Failed to get record due to error {errorMessage}");
+                    _Log.Error($"Failed to get record due to error ({response.StatusCode}): {errorMessage}");
                     return default;
                 }
             }
@@ -277,7 +291,7 @@ namespace NetSuiteIntegration.Services
                 else
                 {
                     string? errorMessage = response.Content.ReadAsStringAsync().Result;
-                    _Log.Error($"Failed to create record due to error {errorMessage}");
+                    _Log.Error($"Failed to create record due to error ({response.StatusCode}): {errorMessage}");
                     return default;
                 }
             }
@@ -320,7 +334,7 @@ namespace NetSuiteIntegration.Services
                 else
                 {
                     string? errorMessage = response.Content.ReadAsStringAsync().Result;
-                    _Log.Error($"Failed to insert record due to error {errorMessage}");
+                    _Log.Error($"Failed to insert record due to error ({response.StatusCode}): {errorMessage}");
                     return false;
                 }
             }
@@ -360,7 +374,7 @@ namespace NetSuiteIntegration.Services
                 else
                 {
                     string? errorMessage = response.Content.ReadAsStringAsync().Result;
-                    _Log.Error($"Failed to find record due to error {errorMessage}");
+                    _Log.Error($"Failed to find record due to error ({response.StatusCode}): {errorMessage}");
                     return default;
                 }
             }
@@ -405,7 +419,7 @@ namespace NetSuiteIntegration.Services
                 else
                 {
                     string? errorMessage = response.Content.ReadAsStringAsync().Result;
-                    _Log.Error($"Failed to update record due to error {errorMessage}");
+                    _Log.Error($"Failed to update record due to error ({response.StatusCode}): {errorMessage}");
                     return false;
                 }
             }
@@ -451,7 +465,7 @@ namespace NetSuiteIntegration.Services
                 else
                 {
                     string? errorMessage = response.Content.ReadAsStringAsync().Result;
-                    _Log.Error($"Failed to update record due to error {errorMessage}");
+                    _Log.Error($"Failed to update record due to error ({response.StatusCode}): {errorMessage}");
                     return false;
                 }
             }
