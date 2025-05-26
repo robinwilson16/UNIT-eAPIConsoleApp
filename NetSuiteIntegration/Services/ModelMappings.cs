@@ -537,7 +537,78 @@ namespace NetSuiteIntegration.Services
             //Map UNIT-e Refunds to NetSuite Customer Refunds
             netSuiteCustomerRefunds = uniteRefunds?.Select(re => new NetSuiteCustomerRefund
             {
-                Memo = $"CRM_{re.CourseCode?.Replace("/", "_")}"
+                Account = new NetSuiteCustomerRefundAccount
+                {
+                    ID = "2760",
+                    RefName = "20105 Total Bank and Cash in Hand : BIMM UNIVERSITY LIMI 28187253"
+                },
+                Address = "Sage Balance Account (LTD)\nBIMM Central - 2 Bartholomews\nBristol  BN1 1HG\nUnited Kingdom",
+                Aracct = new NetSuiteCustomerRefundAracct
+                {
+                    ID = "456",
+                    RefName = "20709 Debtors Control Account"
+                },
+                Balance = 0 - decimal.ToDouble(re.FeeGross ?? 0),
+                Cleared = false,
+                ClearedDate = null,
+                CreatedDate = DateTime.Now,
+                Currency = new NetSuiteCustomerRefundCurrency
+                {
+                    ID = "1",
+                    RefName = "GBP"
+                },
+                Custbody9997AutocashAssertionField = false,
+                Custbody9997IsForEpDd = false,
+                CustbodyAtlasNoHdn = new NetSuiteCustomerRefundCustbodyAtlasNoHdn
+                {
+                    ID = "2",
+                    RefName = "No"
+                },
+                CustbodyAtlasYesHdn = new NetSuiteCustomerRefundCustbodyAtlasYesHdn
+                {
+                    ID = "1",
+                    RefName = "Yes"
+                },
+                CustbodyAznCurrentUser = new NetSuiteCustomerRefundCustbodyAznCurrentUser
+                {
+                    ID = "90",
+                    RefName = "Malcolm Weller"
+                },
+                Customer = new NetSuiteCustomerRefundCustomer
+                {
+                    ID = re.NetSuiteCustomerID.ToString() //Ensure NetSuite Customer ID has been assigned to the UNIT-e Instance
+                },
+                CustomForm = new NetSuiteCustomerRefundCustomForm
+                {
+                    ID = "41",
+                    RefName = "Standard Customer Refund"
+                },
+                ExchangeRate = 1.0,
+                ExcludeFromGLNumbering = false,
+                Memo = $"{(re.Forename?.Length >= 1 ? re.Forename?.Substring(0, 1) : re.Forename)?.ToUpper()} {re.Surname?.ToUpper()} REFUND",
+                PayeeAddressText = "Sage Balance Account (LTD)\nBIMM Central - 2 Bartholomews\nBristol  BN1 1HG\nUnited Kingdom",
+                PayeeAddressList = new NetSuiteCustomerRefundPayeeAddressList
+                {
+                    ID = "175198",
+                    RefName = "LTD"
+                },
+                PaymentOperation = new NetSuiteCustomerRefundPaymentOperation
+                {
+                    ID = "CREDIT",
+                    RefName = "Credit"
+                },
+                PostingPeriod = new NetSuiteCustomerRefundPostingPeriod
+                {
+                    RefName = re.ActualEndDateEnrol?.Format("MMM yyyy"),
+                },
+                PrevDate = re.ActualEndDateEnrol?.Format("yyyy-MM-dd"),
+                Subsidiary = new NetSuiteCustomerRefundSubsidiary
+                {
+                    RefName = re.CampusName
+                },
+                ToBePrinted = false,
+                Total = decimal.ToDouble(re.FeeGross ?? 0),
+                TranDate = re.ActualEndDateEnrol?.Format("yyyy-MM-dd")
             }).ToList<NetSuiteCustomerRefund>();
 
             return netSuiteCustomerRefunds ?? new List<NetSuiteCustomerRefund>();
