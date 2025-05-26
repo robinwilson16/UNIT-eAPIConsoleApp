@@ -40,6 +40,18 @@ namespace NetSuiteIntegration.Models
             }
         }
         public string? AddressMain { get; set; }
+        public string? AddressMainEncoded
+        {
+            get
+            {
+                if (AddressMain != null)
+                {
+                    string addressEncoded = AddressMain.Replace(Environment.NewLine, "\n");
+                    return addressEncoded;
+                }
+                return null;
+            }
+        }
         public string? Address1Main
         {
             get
@@ -106,6 +118,18 @@ namespace NetSuiteIntegration.Models
         [MaxLength(8)]
         public string? PostCodeMain { get; set; }
         public string? AddressTermTime { get; set; }
+        public string? AddressTermTimeEncoded
+        {
+            get
+            {
+                if (AddressTermTime != null)
+                {
+                    string addressEncoded = AddressTermTime.Replace(Environment.NewLine, "\n");
+                    return addressEncoded;
+                }
+                return null;
+            }
+        }
         public string? Address1TermTime
         {
             get
@@ -171,6 +195,18 @@ namespace NetSuiteIntegration.Models
         [MaxLength(8)]
         public string? PostCodeTermTime { get; set; }
         public string? AddressHome { get; set; }
+        public string? AddressHomeEncoded
+        {
+            get
+            {
+                if (AddressHome != null)
+                {
+                    string addressEncoded = AddressHome.Replace(Environment.NewLine, "\n");
+                    return addressEncoded;
+                }
+                return null;
+            }
+        }
         public string? Address1Home
         {
             get
@@ -236,6 +272,18 @@ namespace NetSuiteIntegration.Models
         [MaxLength(8)]
         public string? PostCodeHome { get; set; }
         public string? AddressInvoice { get; set; }
+        public string? AddressInvoiceEncoded
+        {
+            get
+            {
+                if (AddressInvoice != null)
+                {
+                    string addressEncoded = AddressInvoice.Replace(Environment.NewLine, "\n");
+                    return addressEncoded;
+                }
+                return null;
+            }
+        }
         public string? Address1Invoice
         {
             get
@@ -314,6 +362,9 @@ namespace NetSuiteIntegration.Models
         [Column(TypeName = "decimal(19,4)")]
         [DataType(DataType.Currency)]
         public decimal? FeeGross { get; set; }
+
+        //Store NetSuite Customer ID once found for linking
+        [JsonIgnore]
         public int? NetSuiteCustomerID { get; set; }
     }
 }
