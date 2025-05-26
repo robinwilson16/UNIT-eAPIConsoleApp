@@ -307,6 +307,8 @@ namespace NetSuiteIntegration.Models
         public string? HomePhone { get; set; }
         public string? AcademicYearCode { get; set; }
         public string? AcademicYearName { get; set; }
+        public DateTime? AcademicYearStartDate { get; set; }
+        public DateTime? AcademicYearEndDate { get; set; }
         [Column(TypeName = "decimal(16,0)")]
         public decimal? CourseID { get; set; }
         public string? CampusCode { get; set; }

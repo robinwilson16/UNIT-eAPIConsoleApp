@@ -50,6 +50,10 @@ namespace NetSuiteIntegration.Models
 
         //Extra fields
         [JsonIgnore]
+        public DateTime? AcademicYearStartDate { get; set; }
+        [JsonIgnore]
+        public DateTime? AcademicYearEndDate { get; set; }
+        [JsonIgnore]
         public CustomerRefundMatchType? CustomerRefundMatchType { get; set; }
         [JsonIgnore]
         public RecordActionType? RecordActionType { get; set; }
@@ -57,7 +61,8 @@ namespace NetSuiteIntegration.Models
 
     public enum CustomerRefundMatchType
     {
-        ByCourseCode,
+        ByAcademicYear,
+        ByCustomerIDAndAmount,
         NotFound
     }
 }

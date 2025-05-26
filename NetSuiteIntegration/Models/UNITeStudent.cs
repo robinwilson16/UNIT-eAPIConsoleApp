@@ -305,7 +305,9 @@ namespace NetSuiteIntegration.Models
         public string? HomePhone { get; set; }
         public string? AcademicYearCode { get; set; }
         public string? AcademicYearName { get; set; }
-        
+        public DateTime? AcademicYearStartDate { get; set; }
+        public DateTime? AcademicYearEndDate { get; set; }
+
         [Column(TypeName = "decimal(19,4)")]
         [DataType(DataType.Currency)]
         public decimal? FeeNet { get; set; }

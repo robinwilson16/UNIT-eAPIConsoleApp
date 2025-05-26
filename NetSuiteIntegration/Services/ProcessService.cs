@@ -4,6 +4,7 @@ using NetSuiteIntegration.Interfaces;
 using NetSuiteIntegration.Models;
 using NetSuiteIntegration.Shared;
 using Serilog;
+using UNITe.Business.Helper;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 using static NetSuiteIntegration.Models.SharedEnum;
 
@@ -170,12 +171,12 @@ namespace NetSuiteIntegration.Services
                     _log?.Information($"Loaded {uniteEnrolments?.Count} UNIT-e Enrolments");
 
                     if (uniteEnrolments != null)
-                        uniteStudents = GetUNITeStudentsFromEnrolments(uniteEnrolments);
+                        uniteStudents = ModelMappings.MapUNITeEnrolmentsToUNITeStudents(uniteEnrolments);
 
                     _log?.Information($"Loaded {uniteStudents?.Count} Distinct UNIT-e Students");
 
                     if (uniteStudents != null)
-                        uniteNetSuiteCustomers = MapUNITeStudentsToNetSuiteCustomers(uniteStudents);
+                        uniteNetSuiteCustomers = ModelMappings.MapUNITeStudentsToNetSuiteCustomers(uniteStudents);
 
                     if (uniteNetSuiteCustomers != null)
                     {
@@ -311,7 +312,7 @@ namespace NetSuiteIntegration.Services
                     _log?.Information($"Loaded {uniteCourses?.Count} UNIT-e Courses");
 
                     if (uniteCourses != null)
-                        uniteNetSuiteNonInventorySaleItems = MapUNITeCoursesToNetSuiteNonInventorySaleItems(uniteCourses);
+                        uniteNetSuiteNonInventorySaleItems = ModelMappings.MapUNITeCoursesToNetSuiteNonInventorySaleItems(uniteCourses);
 
                     if (uniteNetSuiteNonInventorySaleItems != null)
                     {
@@ -416,7 +417,7 @@ namespace NetSuiteIntegration.Services
                     _log?.Information($"Loaded {uniteFees?.Count} UNIT-e Fees");
 
                     if (uniteFees != null)
-                        uniteNetSuiteInvoices = MapUNITeFeesToNetSuiteInvoices(uniteFees);
+                        uniteNetSuiteInvoices = ModelMappings.MapUNITeFeesToNetSuiteInvoices(uniteFees);
 
                     if (uniteNetSuiteInvoices != null)
                     {
@@ -424,7 +425,7 @@ namespace NetSuiteIntegration.Services
                         foreach (NetSuiteInvoice? invoice in uniteNetSuiteInvoices!)
                         {
                             rowNumber++;
-                            _log?.Information($"\nRecord {rowNumber} of {uniteNetSuiteInvoices.Count}: Searching for {invoice?.ItemID} - {invoice?.DisplayName} in NetSuite");
+                            _log?.Information($"\nRecord {rowNumber} of {uniteNetSuiteInvoices.Count}: Searching for invoice to {invoice?.Email} for {invoice?.Total?.Format("C2")} in NetSuite");
 
                             #region Find Invoice
                             //Find this fee (invoice) in NetSuite
@@ -521,7 +522,7 @@ namespace NetSuiteIntegration.Services
                     _log?.Information($"Loaded {uniteCreditNotes?.Count} UNIT-e Credit Notes");
 
                     if (uniteCreditNotes != null)
-                        uniteNetSuiteCreditMemos = MapUNITeCreditNotesToNetSuiteCreditMemos(uniteCreditNotes);
+                        uniteNetSuiteCreditMemos = ModelMappings.MapUNITeCreditNotesToNetSuiteCreditMemos(uniteCreditNotes);
 
                     if (uniteNetSuiteCreditMemos != null)
                     {
@@ -529,7 +530,7 @@ namespace NetSuiteIntegration.Services
                         foreach (NetSuiteCreditMemo? creditMemo in uniteNetSuiteCreditMemos!)
                         {
                             rowNumber++;
-                            _log?.Information($"\nRecord {rowNumber} of {uniteNetSuiteCreditMemos.Count}: Searching for {creditMemo?.ItemID} - {creditMemo?.DisplayName} in NetSuite");
+                            _log?.Information($"\nRecord {rowNumber} of {uniteNetSuiteCreditMemos.Count}: Searching for credit note to {creditMemo?.Email} for {creditMemo?.Total?.Format("C2")} in NetSuite");
 
                             #region Find Credit Note
                             //Find this credit note (credit memo) in NetSuite
@@ -626,7 +627,7 @@ namespace NetSuiteIntegration.Services
                     _log?.Information($"Loaded {uniteRefunds?.Count} UNIT-e Refunds");
 
                     if (uniteRefunds != null)
-                        uniteNetSuiteCustomerRefunds = MapUNITeRefundsToNetSuiteCustomerRefunds(uniteRefunds);
+                        uniteNetSuiteCustomerRefunds = ModelMappings.MapUNITeRefundsToNetSuiteCustomerRefunds(uniteRefunds);
 
                     if (uniteNetSuiteCustomerRefunds != null)
                     {
@@ -634,14 +635,14 @@ namespace NetSuiteIntegration.Services
                         foreach (NetSuiteCustomerRefund? refund in uniteNetSuiteCustomerRefunds!)
                         {
                             rowNumber++;
-                            _log?.Information($"\nRecord {rowNumber} of {uniteNetSuiteCustomerRefunds.Count}: Searching for {refund?.ItemID} - {refund?.DisplayName} in NetSuite");
+                            _log?.Information($"\nRecord {rowNumber} of {uniteNetSuiteCustomerRefunds.Count}: Searching for refund to {refund?.Customer?.RefName} for {refund?.Total?.Format("C2")} in NetSuite");
 
                             #region Find Refund
                             //Find this refund (customer refund) in NetSuite
                             NetSuiteCustomerRefund? matchedCustomerRefund = await GetNetSuiteCustomerRefund(refund ?? new NetSuiteCustomerRefund());
 
-                            if (matchedCustomerRefund?.CustomerRefundMatchType == CustomerRefundMatchType.ByCourseCode)
-                                _log?.Information($"Refund Found in NetSuite by Course Code with NetSuite Customer Refund Item ID: {matchedCustomerRefund?.ID}");
+                            if (matchedCustomerRefund?.CustomerRefundMatchType == CustomerRefundMatchType.ByCustomerIDAndAmount)
+                                _log?.Information($"Refund Found in NetSuite by Customer ID and Amount with NetSuite Customer Refund Item ID: {matchedCustomerRefund?.ID}");
                             else
                                 _log?.Information($"Refund Not Found in NetSuite");
 
@@ -690,258 +691,6 @@ namespace NetSuiteIntegration.Services
             }
 
             return isOK;
-        }
-
-        public IList<UNITeStudent> GetUNITeStudentsFromEnrolments(IList<UNITeEnrolment> uniteEnrolments)
-        {
-            IList<UNITeStudent>? uniteStudents = new List<UNITeStudent>();
-
-            //Map UNIT-e Enrolments to UNIT-e Students
-            uniteStudents = uniteEnrolments?.DistinctBy(e => e.StudentID)
-                .Select(stu => new UNITeStudent
-                {
-                    StudentID = stu.StudentID,
-                    StudentRef = stu.StudentRef,
-                    ERPID = stu.ERPID,
-                    Surname = stu.Surname,
-                    Forename = stu.Forename,
-                    PreferredName = stu.PreferredName,
-                    TitleCode = stu.TitleCode,
-                    TitleName = stu.TitleName,
-                    GenderCode = stu.GenderCode,
-                    GenderName = stu.GenderName,
-                    DateOfBirth = stu.DateOfBirth,
-                    UCASPersonalID = stu.UCASPersonalID,
-                    ULN = stu.ULN,
-                    AddressMain = stu.AddressMain,
-                    PostCodeMain = stu.PostCodeMain,
-                    AddressMainType = stu.AddressMainType,
-                    AddressTermTime = stu.AddressTermTime,
-                    PostCodeTermTime = stu.PostCodeTermTime,
-                    AddressHome = stu.AddressHome,
-                    PostCodeHome = stu.PostCodeHome,
-                    AddressInvoice = stu.AddressInvoice,
-                    PostCodeInvoice = stu.PostCodeInvoice,
-                    EmailAddress = stu.EmailAddress,
-                    Mobile = stu.Mobile,
-                    HomePhone = stu.HomePhone,
-                    AcademicYearCode = stu.AcademicYearCode,
-                    AcademicYearName = stu.AcademicYearName
-                }).ToList<UNITeStudent>();
-
-            return uniteStudents ?? new List<UNITeStudent>();
-        }
-
-        public IList<NetSuiteCustomer> MapUNITeStudentsToNetSuiteCustomers(IList<UNITeStudent> uniteStudents)
-        {
-            IList<NetSuiteCustomer>? netSuiteCustomers = new List<NetSuiteCustomer>();
-
-            //Map UNIT-e Students to NetSuite Customers
-            netSuiteCustomers = uniteStudents?.Select(cus => new NetSuiteCustomer
-            {
-                CustEntityClientStudentNo = cus.StudentRef,
-                CustEntityCRMApplicantID = cus.ERPID,
-                LastName = cus.Surname,
-                FirstName = cus.Forename,
-                Email = cus.EmailAddress,
-                Phone = cus.Mobile,
-                IsPerson = true,
-                IsInactive = false,
-                DepositBalance = Convert.ToDouble(cus.FeeGross, CultureInfo.InvariantCulture),
-                Addresses = new List<NetSuiteAddressBook>{
-                    cus.PostCodeMain != null ? new NetSuiteAddressBook {
-                        DefaultBilling = true,
-                        DefaultShipping = true,
-                        IsResidential = true,
-                        Label = cus.AddressMainType,
-                        Address = new NetSuiteAddress
-                        {
-                            Addr1 = cus.Address1Main,
-                            Addr2 = cus.Address2Main,
-                            Addressee = $"{cus.Forename} {cus.Surname}",
-                            City = cus.Address3Main,
-                            Country = new NetSuiteAddressCountry
-                            {
-                                RefName = cus.CountryNameMain
-                            },
-                            Override = false,
-                            Zip = cus.PostCodeMain
-                        }
-                    } : new NetSuiteAddressBook(),
-                    cus.PostCodeTermTime != null ? new NetSuiteAddressBook
-                    {
-                        DefaultBilling = false,
-                        DefaultShipping = false,
-                        IsResidential = false,
-                        Label = "Term Time",
-                        Address = new NetSuiteAddress
-                        {
-                            Addr1 = cus.Address1TermTime,
-                            Addr2 = cus.Address2TermTime,
-                            Addressee = $"{cus.Forename} {cus.Surname}",
-                            City = cus.Address3TermTime,
-                            Country = new NetSuiteAddressCountry
-                            {
-                                RefName = cus.CountryNameTermTime
-                            },
-                            Override = false,
-                            Zip = cus.PostCodeTermTime
-                        }
-                    } : new NetSuiteAddressBook(),
-                    cus.PostCodeHome != null ? new NetSuiteAddressBook
-                    {
-                        DefaultBilling = false,
-                        DefaultShipping = false,
-                        IsResidential = false,
-                        Label = "Home",
-                        Address = new NetSuiteAddress
-                        {
-                            Addr1 = cus.Address1Home,
-                            Addr2 = cus.Address2Home,
-                            Addressee = $"{cus.Forename} {cus.Surname}",
-                            City = cus.Address3Home,
-                            Country = new NetSuiteAddressCountry
-                            {
-                                RefName = cus.CountryNameHome
-                            },
-                            Override = false,
-                            Zip = cus.PostCodeHome
-                        }
-                    } : new NetSuiteAddressBook(),
-                    cus.PostCodeInvoice != null ? new NetSuiteAddressBook
-                    {
-                        DefaultBilling = false,
-                        DefaultShipping = false,
-                        IsResidential = false,
-                        Label = "Invoice",
-                        Address = new NetSuiteAddress
-                        {
-                            Addr1 = cus.Address1Invoice,
-                            Addr2 = cus.Address2Invoice,
-                            Addressee = $"{cus.Forename} {cus.Surname}",
-                            City = cus.Address3Invoice,
-                            Country = new NetSuiteAddressCountry
-                            {
-                                RefName = cus.CountryNameInvoice
-                            },
-                            Override = false,
-                            Zip = cus.PostCodeInvoice
-                        }
-                    } : new NetSuiteAddressBook(),
-                }
-            }).ToList<NetSuiteCustomer>();
-
-            return netSuiteCustomers ?? new List<NetSuiteCustomer>();
-        }
-
-        public IList<NetSuiteNonInventorySaleItem> MapUNITeCoursesToNetSuiteNonInventorySaleItems(IList<UNITeCourse> uniteCourses)
-        {
-            IList<NetSuiteNonInventorySaleItem>? netSuiteNonInventorySaleItems = new List<NetSuiteNonInventorySaleItem>();
-
-            //Map UNIT-e Courses to NetSuite Non-Inventory Sale Items
-            netSuiteNonInventorySaleItems = uniteCourses?.Select(crs => new NetSuiteNonInventorySaleItem
-            {
-                Class = new NetSuiteNonInventorySaleItemClass
-                {
-                    RefName = crs.CampusName
-                },
-                CreatedDate = DateTime.Now,
-                CustItem1 = crs.StartDate?.Format("yyyy-MM-dd"),
-                CustItem2 = crs.EndDate?.Format("yyyy-MM-dd"),
-                CustItemIsPOItem = false,
-                CustomForm = new NetSuiteNonInventorySaleItemCustomForm
-                {
-                    RefName = crs.SubjectName
-                },
-                DeferredRevenueAccount = new NetSuiteNonInventorySaleItemDeferredRevenueAccount
-                {
-                    ID = "216",
-                    RefName = "30602 Deferred Revenue"
-                },
-                Department = new NetSuiteNonInventorySaleItemDepartment
-                {
-                    ID = "26",
-                    RefName = "Income : Student Income"
-                },
-                DirectRevenuePosting = false,
-                DisplayName = crs.CourseTitle,
-                EnforceMinQTYInternally = true,
-                ExternalID = $"CRM_{crs.CourseCode?.Replace("/", "_")}",
-                IncludeChildren = false,
-                IncomeAccount = new NetSuiteNonInventorySaleItemIncomeAccount
-                {
-                    ID = "1233",
-                    RefName = "50120 Total Net Income : Total Fee Income : Fee Income - Postgrad"
-                },
-                IsFulfillable = false,
-                IsGCOCompliant = false,
-                IsInactive = false,
-                IsOnline = false,
-                ItemID = crs.CourseCode,
-                Location = new NetSuiteNonInventorySaleItemLocation
-                {
-                    RefName = crs.CampusName
-                },
-                RevenueRecognitionRule = new NetSuiteNonInventorySaleItemRevenueRecognitionRule
-                {
-                    ID = "4",
-                    RefName = "BIMM - Straight Line, Exact Days"
-                },
-                RevRecForecastRule = new NetSuiteNonInventorySaleItemRevRecForecastRule
-                {
-                    ID = "4",
-                    RefName = "BIMM - Straight Line, Exact Days"
-                },
-                SalesDescription = crs.CourseTitle,
-                UseMarginalRates = false,
-                VSOEDelivered = false,
-                VSOESopGroup = new NetSuiteNonInventorySaleItemVSOESopGroup
-                {
-                    ID = "NORMAL",
-                    RefName = "Normal"
-                },
-            }).ToList<NetSuiteNonInventorySaleItem>();
-
-            return netSuiteNonInventorySaleItems ?? new List<NetSuiteNonInventorySaleItem>();
-        }
-
-        public IList<NetSuiteInvoice> MapUNITeFeesToNetSuiteInvoices(IList<UNITeFee> uniteFees)
-        {
-            IList<NetSuiteInvoice>? netSuiteInvoices = new List<NetSuiteInvoice>();
-
-            //Map UNIT-e Fees to NetSuite Invoices
-            netSuiteInvoices = uniteFees?.Select(inv => new NetSuiteInvoice
-            {
-                ExternalID = $"CRM_{inv.CourseCode?.Replace("/", "_")}"
-            }).ToList<NetSuiteInvoice>();
-
-            return netSuiteInvoices ?? new List<NetSuiteInvoice>();
-        }
-
-        public IList<NetSuiteCreditMemo> MapUNITeCreditNotesToNetSuiteCreditMemos(IList<UNITeCreditNote> uniteCreditNotes)
-        {
-            IList<NetSuiteCreditMemo>? netSuiteCreditMemos = new List<NetSuiteCreditMemo>();
-
-            //Map UNIT-e Credit Notes to NetSuite Credit Memos
-            netSuiteCreditMemos = uniteCreditNotes?.Select(re => new NetSuiteCreditMemo
-            {
-                ExternalID = $"CRM_{re.CourseCode?.Replace("/", "_")}"
-            }).ToList<NetSuiteCreditMemo>();
-
-            return netSuiteCreditMemos ?? new List<NetSuiteCreditMemo>();
-        }
-
-        public IList<NetSuiteCustomerRefund> MapUNITeRefundsToNetSuiteCustomerRefunds(IList<UNITeRefund> uniteRefunds)
-        {
-            IList<NetSuiteCustomerRefund>? netSuiteCustomerRefunds = new List<NetSuiteCustomerRefund>();
-
-            //Map UNIT-e Refunds to NetSuite Customer Refunds
-            netSuiteCustomerRefunds = uniteRefunds?.Select(re => new NetSuiteCustomerRefund
-            {
-                ExternalID = $"CRM_{re.CourseCode?.Replace("/", "_")}"
-            }).ToList<NetSuiteCustomerRefund>();
-
-            return netSuiteCustomerRefunds ?? new List<NetSuiteCustomerRefund>();
         }
 
         public NetSuiteSearchParameter AddNetSuiteSearchParameter(Operand? operand, string? fieldName, Operator? op, string? value)
@@ -1413,7 +1162,9 @@ namespace NetSuiteIntegration.Services
             {
                 searchParameters = new List<NetSuiteSearchParameter>();
 
-                param = AddNetSuiteSearchParameter(null, "itemID", Operator.IS, netSuiteInvoice?.ItemID);
+                param = AddNetSuiteSearchParameter(null, "email", Operator.IS, netSuiteInvoice?.Email);
+                searchParameters.Add(param);
+                param = AddNetSuiteSearchParameter(null, "memo", Operator.IS, netSuiteInvoice?.Memo);
                 searchParameters.Add(param);
 
                 matchedInvoice = await FindNetSuiteInvoice(searchParameters, InvoiceMatchType.ByCourseCode);
@@ -1517,12 +1268,12 @@ namespace NetSuiteIntegration.Services
             NetSuiteSearchParameter param = new NetSuiteSearchParameter();
             NetSuiteSearchResult? searchResults = new NetSuiteSearchResult();
 
-            //Check if the credit note already exists in NetSuite by the course code
+            //Check if the credit note already exists in NetSuite by the email address
             if (matchedCreditMemo?.ID == null)
             {
                 searchParameters = new List<NetSuiteSearchParameter>();
 
-                param = AddNetSuiteSearchParameter(null, "itemID", Operator.IS, netSuiteCreditMemo?.ItemID);
+                param = AddNetSuiteSearchParameter(null, "email", Operator.IS, netSuiteCreditMemo?.Email);
                 searchParameters.Add(param);
 
                 matchedCreditMemo = await FindNetSuiteCreditMemo(searchParameters, CreditMemoMatchType.ByCourseCode);
@@ -1621,20 +1372,41 @@ namespace NetSuiteIntegration.Services
 
         public async Task<NetSuiteCustomerRefund> GetNetSuiteCustomerRefund(NetSuiteCustomerRefund netSuiteCustomerRefund)
         {
+            //Check if the refund already exists in NetSuite by first returning all refunds for the academic year (to avoid returning too many records)
+            //and then filtering by the student and the amount as this does not appear possible in the NetSuite REST API directly as it does not support
+            //querying sub-elements
+
+            ICollection<NetSuiteCustomerRefund>? allCustomerRefunds = new List<NetSuiteCustomerRefund>();
             NetSuiteCustomerRefund? matchedCustomerRefund = new NetSuiteCustomerRefund();
             IList<NetSuiteSearchParameter> searchParameters = new List<NetSuiteSearchParameter>();
             NetSuiteSearchParameter param = new NetSuiteSearchParameter();
             NetSuiteSearchResult? searchResults = new NetSuiteSearchResult();
 
-            //Check if the refund already exists in NetSuite by the course code
-            if (matchedCustomerRefund?.ID == null)
+            searchParameters = new List<NetSuiteSearchParameter>();
+
+            param = AddNetSuiteSearchParameter(null, "tranDate", Operator.ON_OR_AFTER, netSuiteCustomerRefund?.AcademicYearStartDate?.Format("dd/MM/yyyy"));
+            searchParameters.Add(param);
+            param = AddNetSuiteSearchParameter(null, "tranDate", Operator.ON_OR_BEFORE, netSuiteCustomerRefund?.AcademicYearEndDate?.Format("dd/MM/yyyy"));
+            searchParameters.Add(param);
+
+            allCustomerRefunds = await FindNetSuiteCustomerRefunds(searchParameters, CustomerRefundMatchType.ByAcademicYear);
+
+            if (allCustomerRefunds != null)
             {
-                searchParameters = new List<NetSuiteSearchParameter>();
-
-                param = AddNetSuiteSearchParameter(null, "itemID", Operator.IS, netSuiteCustomerRefund?.ItemID);
-                searchParameters.Add(param);
-
-                matchedCustomerRefund = await FindNetSuiteCustomerRefund(searchParameters, CustomerRefundMatchType.ByCourseCode);
+                foreach (NetSuiteCustomerRefund? refund in allCustomerRefunds)
+                {
+                    if (refund != null && refund.Customer != null)
+                    {
+                        //Check if the refund matches the customer ID and total amount
+                        if (refund.Customer.ID == netSuiteCustomerRefund?.Customer?.ID
+                            && refund.Total == netSuiteCustomerRefund?.Total)
+                        {
+                            matchedCustomerRefund = refund;
+                            matchedCustomerRefund.CustomerRefundMatchType = CustomerRefundMatchType.ByCustomerIDAndAmount;
+                            break; //Exit loop as match is found
+                        }
+                    }
+                }
             }
 
             if (matchedCustomerRefund?.ID == null)
@@ -1680,6 +1452,50 @@ namespace NetSuiteIntegration.Services
             }
 
             return matchedCustomerRefund ?? new NetSuiteCustomerRefund();
+        }
+
+        public async Task<ICollection<NetSuiteCustomerRefund>> FindNetSuiteCustomerRefunds(IList<NetSuiteSearchParameter>? searchParameters, CustomerRefundMatchType customerRefundMatchType)
+        {
+            NetSuiteSearchResult? searchResults = new NetSuiteSearchResult();
+            ICollection<NetSuiteCustomerRefund>? matchedCustomerRefunds = new List<NetSuiteCustomerRefund>();
+            NetSuiteCustomerRefund? refund = new NetSuiteCustomerRefund();
+
+            try
+            {
+                //Perform the search
+                if (searchParameters == null)
+                    searchParameters = new List<NetSuiteSearchParameter>();
+
+                if (_netsuite != null)
+                    searchResults = await _netsuite.Search<NetSuiteSearchResult>("customerRefund", searchParameters);
+
+                if (searchResults?.Count > 0)
+                {
+                    //Get record details if it matches as should only ever be one match here
+                    if (_netsuite != null && searchResults.Items != null)
+                    {
+                        foreach (NetSuiteSearchResultItem netSuiteSearchResult in searchResults.Items)
+                        {
+                            if (netSuiteSearchResult != null)
+                            {
+                                refund = await _netsuite.Get<NetSuiteCustomerRefund>("customerRefund", int.Parse(netSuiteSearchResult.ID ?? "0"));
+                                if (refund != null)
+                                {
+                                    refund.CustomerRefundMatchType = customerRefundMatchType;
+                                    matchedCustomerRefunds.Add(refund);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _log?.Error($"Error in FindNetSuiteCustomerRefund: {ex.Message}");
+                matchedCustomerRefunds = null;
+            }
+
+            return matchedCustomerRefunds ?? new List<NetSuiteCustomerRefund>();
         }
 
         public async Task<NetSuiteCustomerRefund> UpdateNetSuiteCustomerRefund(NetSuiteCustomerRefund netSuiteCustomerRefund, bool? readOnly)

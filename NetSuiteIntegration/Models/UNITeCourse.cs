@@ -17,6 +17,8 @@ namespace NetSuiteIntegration.Models
         public decimal CourseID { get; set; }
         public string? AcademicYearCode { get; set; }
         public string? AcademicYearName { get; set; }
+        public DateTime? AcademicYearStartDate { get; set; }
+        public DateTime? AcademicYearEndDate { get; set; }
         public string? CampusCode { get; set; }
         public string? CampusName { get; set; }
         public string? DepartmentCode { get; set; }
