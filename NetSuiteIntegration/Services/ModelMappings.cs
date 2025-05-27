@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.ConstrainedExecution;
 using System.Text;
 using System.Threading.Tasks;
 using NetSuiteIntegration.Models;
@@ -12,9 +13,9 @@ namespace NetSuiteIntegration.Services
 {
     public static class ModelMappings
     {
-        public static IList<UNITeStudent> MapUNITeEnrolmentsToUNITeStudents(IList<UNITeEnrolment> uniteEnrolments)
+        public static ICollection<UNITeStudent> MapUNITeEnrolmentsToUNITeStudents(ICollection<UNITeEnrolment> uniteEnrolments)
         {
-            IList<UNITeStudent>? uniteStudents = new List<UNITeStudent>();
+            ICollection<UNITeStudent>? uniteStudents = new List<UNITeStudent>();
 
             //Map UNIT-e Enrolments to UNIT-e Students
             uniteStudents = uniteEnrolments?.DistinctBy(e => e.StudentID)
@@ -54,9 +55,9 @@ namespace NetSuiteIntegration.Services
             return uniteStudents ?? new List<UNITeStudent>();
         }
 
-        public static IList<NetSuiteCustomer> MapUNITeStudentsToNetSuiteCustomers(IList<UNITeStudent> uniteStudents)
+        public static ICollection<NetSuiteCustomer> MapUNITeStudentsToNetSuiteCustomers(ICollection<UNITeStudent> uniteStudents)
         {
-            IList<NetSuiteCustomer>? netSuiteCustomers = new List<NetSuiteCustomer>();
+            ICollection<NetSuiteCustomer>? netSuiteCustomers = new List<NetSuiteCustomer>();
 
             //Map UNIT-e Students to NetSuite Customers
             netSuiteCustomers = uniteStudents?.Select(cus => new NetSuiteCustomer
@@ -149,16 +150,19 @@ namespace NetSuiteIntegration.Services
                             Override = false,
                             Zip = cus.PostCodeInvoice
                         }
-                    } : new NetSuiteAddressBook(),
-                }
+                    } : new NetSuiteAddressBook()
+                },
+                AcademicYearStartDate = cus.AcademicYearStartDate,
+                AcademicYearEndDate = cus.AcademicYearEndDate,
+                UNITeStudentID = cus.StudentID
             }).ToList<NetSuiteCustomer>();
 
             return netSuiteCustomers ?? new List<NetSuiteCustomer>();
         }
 
-        public static IList<NetSuiteNonInventorySaleItem> MapUNITeCoursesToNetSuiteNonInventorySaleItems(IList<UNITeCourse> uniteCourses)
+        public static ICollection<NetSuiteNonInventorySaleItem> MapUNITeCoursesToNetSuiteNonInventorySaleItems(ICollection<UNITeCourse> uniteCourses)
         {
-            IList<NetSuiteNonInventorySaleItem>? netSuiteNonInventorySaleItems = new List<NetSuiteNonInventorySaleItem>();
+            ICollection<NetSuiteNonInventorySaleItem>? netSuiteNonInventorySaleItems = new List<NetSuiteNonInventorySaleItem>();
 
             //Map UNIT-e Courses to NetSuite Non-Inventory Sale Items
             netSuiteNonInventorySaleItems = uniteCourses?.Select(crs => new NetSuiteNonInventorySaleItem
@@ -222,21 +226,18 @@ namespace NetSuiteIntegration.Services
                     ID = "NORMAL",
                     RefName = "Normal"
                 },
+                AcademicYearStartDate = crs.AcademicYearStartDate,
+                AcademicYearEndDate = crs.AcademicYearEndDate,
+                UNITeCourseID = crs.CourseID
             }).ToList<NetSuiteNonInventorySaleItem>();
 
             return netSuiteNonInventorySaleItems ?? new List<NetSuiteNonInventorySaleItem>();
         }
 
-        public static IList<NetSuiteInvoice> MapUNITeFeesToNetSuiteInvoices(IList<UNITeFee> uniteFees)
+        public static ICollection<NetSuiteInvoice> MapUNITeFeesToNetSuiteInvoices(ICollection<UNITeFee> uniteFees)
         {
-            IList<NetSuiteInvoice>? netSuiteInvoices = new List<NetSuiteInvoice>();
-            int? numRecordsWithCustomerID = uniteFees.Where(f => f.NetSuiteCustomerID > 0).Count();
-
-            if (numRecordsWithCustomerID != uniteFees.Count())
-            {
-                Console.WriteLine($"Not all invoice records are valid as {uniteFees.Count() - numRecordsWithCustomerID} do not have a customer ID assigned");
-                return new List<NetSuiteInvoice>();
-            }
+            ICollection<NetSuiteInvoice>? netSuiteInvoices = new List<NetSuiteInvoice>();
+            int? numRecordsWithCustomerID = uniteFees.Where(f => f.NetSuiteCustomerID?.Length >= 1).Count();
 
             //Map UNIT-e Fees to NetSuite Invoices
             netSuiteInvoices = uniteFees?.Select(inv => new NetSuiteInvoice
@@ -322,7 +323,7 @@ namespace NetSuiteIntegration.Services
                 Email = inv.EmailAddress,
                 Entity = new NetSuiteInvoiceEntity
                 {
-                    ID = inv.NetSuiteCustomerID.ToString() //Ensure NetSuite Customer ID has been assigned to the UNIT-e Instance
+                    ID = inv.NetSuiteCustomerID //Ensure NetSuite Customer ID has been assigned to the UNIT-e Instance
                 },
                 EstGrossProfit = decimal.ToDouble(inv.FeeGross ?? 0),
                 EstGrossProfitPercent = 100.0,
@@ -373,25 +374,23 @@ namespace NetSuiteIntegration.Services
                 ToBePrinted = false,
                 Total = decimal.ToDouble(inv.FeeGross ?? 0),
                 TotalCostEstimate = 0,
-                TranDate = inv.StartDateEnrol?.Format("yyyy-MM-dd")
+                TranDate = inv.StartDateEnrol?.Format("yyyy-MM-dd"),
+                AcademicYearStartDate = inv.AcademicYearStartDate,
+                AcademicYearEndDate = inv.AcademicYearEndDate,
+                UNITeStudentID = inv.StudentID,
+                UNITeEnrolmentID = inv.EnrolmentID
             }).ToList<NetSuiteInvoice>();
 
             return netSuiteInvoices ?? new List<NetSuiteInvoice>();
         }
 
-        public static IList<NetSuiteCreditMemo> MapUNITeCreditNotesToNetSuiteCreditMemos(IList<UNITeCreditNote> uniteCreditNotes)
+        public static ICollection<NetSuiteCreditMemo> MapUNITeCreditNotesToNetSuiteCreditMemos(ICollection<UNITeCreditNote> uniteCreditNotes)
         {
-            IList<NetSuiteCreditMemo>? netSuiteCreditMemos = new List<NetSuiteCreditMemo>();
-            int? numRecordsWithCustomerID = uniteCreditNotes.Where(f => f.NetSuiteCustomerID > 0).Count();
-
-            if (numRecordsWithCustomerID != uniteCreditNotes.Count())
-            {
-                Console.WriteLine($"Not all credit note records are valid as {uniteCreditNotes.Count() - numRecordsWithCustomerID} do not have a customer ID assigned");
-                return new List<NetSuiteCreditMemo>();
-            }
+            ICollection<NetSuiteCreditMemo>? netSuiteCreditMemos = new List<NetSuiteCreditMemo>();
+            int? numRecordsWithCustomerID = uniteCreditNotes.Where(f => f.NetSuiteCustomerID?.Length >= 1).Count();
 
             //Map UNIT-e Credit Notes to NetSuite Credit Memos
-            netSuiteCreditMemos = uniteCreditNotes?.Select(re => new NetSuiteCreditMemo
+            netSuiteCreditMemos = uniteCreditNotes?.Select(cre => new NetSuiteCreditMemo
             {
                 Account = new NetSuiteCreditMemoAccount
                 {
@@ -399,19 +398,19 @@ namespace NetSuiteIntegration.Services
                     RefName = "20709 Debtors Control Account"
                 },
                 AmountPaid = 0,
-                AmountRemaining = decimal.ToDouble(re.FeeGross ?? 0),
+                AmountRemaining = decimal.ToDouble(cre.FeeGross ?? 0),
                 Applied = 0,
-                AsOfDate = re.ActualEndDateEnrol?.Format("yyyy-MM-dd"),
-                BillAddress = re.AddressMainEncoded,
+                AsOfDate = cre.ActualEndDateEnrol?.Format("yyyy-MM-dd"),
+                BillAddress = cre.AddressMainEncoded,
                 BillAddressList = new NetSuiteCreditMemoBillAddressList
                 {
-                    RefName = re.AddressMainType
+                    RefName = cre.AddressMainType
                 },
-                BillingAddressText = re.AddressMainEncoded,
+                BillingAddressText = cre.AddressMainEncoded,
                 CanHaveStackable = false,
                 Class = new NetSuiteCreditMemoClass
                 {
-                    RefName = $"{re.SubjectName}: {re.CampusName}"
+                    RefName = $"{cre.SubjectName}: {cre.CampusName}"
                 },
                 CreatedDate = DateTime.Now,
                 Currency = new NetSuiteCreditMemoCurrency
@@ -442,7 +441,7 @@ namespace NetSuiteIntegration.Services
                 },
                 CustbodyEmeaTransactionType = "custcred",
                 CustbodyEscCreatedDate = DateTime.Now.Format("yyyy-MM-dd"),
-                CustbodyExternalID = $"ENR_{re.EnrolmentID.ToString()}",
+                CustbodyExternalID = $"ENR_{cre.EnrolmentID.ToString()}",
                 CustbodyF3IntercompanyInternalVb = new NetSuiteCreditMemoCustbodyF3IntercompanyInternalVb
                 {
                     ID = "2",
@@ -453,8 +452,8 @@ namespace NetSuiteIntegration.Services
                 CustbodySiiArticle7273 = false,
                 CustbodySiiIsThirdParty = false,
                 CustbodySiiNotReportedInTime = false,
-                CustbodyZncGbpEquivNet = decimal.ToDouble(re.FeeGross ?? 0),
-                CustbodyZncGbpEquivTotal = decimal.ToDouble(re.FeeGross ?? 0),
+                CustbodyZncGbpEquivNet = decimal.ToDouble(cre.FeeGross ?? 0),
+                CustbodyZncGbpEquivTotal = decimal.ToDouble(cre.FeeGross ?? 0),
                 CustbodyZncGbpEquivVat = 0,
                 CustomForm = new NetSuiteCreditMemoCustomForm
                 {
@@ -467,36 +466,36 @@ namespace NetSuiteIntegration.Services
                     RefName = "Income : Student Income"
                 },
                 DiscountTotal = 0,
-                Email = re.EmailAddress,
+                Email = cre.EmailAddress,
                 Entity = new NetSuiteCreditMemoEntity
                 {
-                    ID = re.NetSuiteCustomerID.ToString() //Ensure NetSuite Customer ID has been assigned to the UNIT-e Instance
+                    ID = cre.NetSuiteCustomerID //Ensure NetSuite Customer ID has been assigned to the UNIT-e Instance
                 },
-                EstGrossProfit = decimal.ToDouble(re.FeeGross ?? 0),
+                EstGrossProfit = decimal.ToDouble(cre.FeeGross ?? 0),
                 EstGrossProfitPercent = 100.0,
                 ExchangeRate = 1.0,
                 ExcludeFromGLNumbering = false,
-                ExternalID = $"ENR_{re.EnrolmentID.ToString()}",
+                ExternalID = $"ENR_{cre.EnrolmentID.ToString()}",
                 Location = new NetSuiteCreditMemoLocation
                 {
-                    RefName = re.CampusName
+                    RefName = cre.CampusName
                 },
-                Memo = $"{re.CourseCode}, CREDIT_TUT_GBP, {(re.Forename?.Length >= 3? re.Forename?.Substring(0, 3) : re.Forename)}{(re.Surname?.Length >= 3 ? re.Surname?.Substring(0, 3) : re.Surname)}, UNIT-e Ref={re.StudentRef}",
+                Memo = $"{cre.CourseCode}, CREDIT_TUT_GBP, {(cre.Forename?.Length >= 3? cre.Forename?.Substring(0, 3) : cre.Forename)}{(cre.Surname?.Length >= 3 ? cre.Surname?.Substring(0, 3) : cre.Surname)}, UNIT-e Ref={cre.StudentRef}",
                 Originator = "UNIT-e",
                 PostingPeriod = new NetSuiteCreditMemoPostingPeriod
                 {
-                    RefName = re.ActualEndDateEnrol?.Format("MMM yyyy"),
+                    RefName = cre.ActualEndDateEnrol?.Format("MMM yyyy"),
                 },
-                PrevDate = re.ActualEndDateEnrol?.Format("yyyy-MM-dd"),
-                SalesEffectiveDate = re.ActualEndDateEnrol?.Format("yyyy-MM-dd"),
-                ShipAddress = re.AddressMainEncoded,
+                PrevDate = cre.ActualEndDateEnrol?.Format("yyyy-MM-dd"),
+                SalesEffectiveDate = cre.ActualEndDateEnrol?.Format("yyyy-MM-dd"),
+                ShipAddress = cre.AddressMainEncoded,
                 ShipAddressList = new NetSuiteCreditMemoShipAddressList
                 {
-                    RefName = re.AddressMainType
+                    RefName = cre.AddressMainType
                 },
                 ShipIsResidential = true,
                 ShipOverride = false,
-                ShippingAddressText = re.AddressMainEncoded,
+                ShippingAddressText = cre.AddressMainEncoded,
                 Source = new NetSuiteCreditMemoSource
                 {
                     RefName = "UNIT-e"
@@ -508,31 +507,29 @@ namespace NetSuiteIntegration.Services
                 },
                 Subsidiary = new NetSuiteCreditMemoSubsidiary
                 {
-                    RefName = re.CampusName
+                    RefName = cre.CampusName
                 },
-                Subtotal = decimal.ToDouble(re.FeeGross ?? 0),
+                Subtotal = decimal.ToDouble(cre.FeeGross ?? 0),
                 ToBeEmailed = false,
                 ToBeFaxed = false,
                 ToBePrinted = false,
-                Total = decimal.ToDouble(re.FeeGross ?? 0),
+                Total = decimal.ToDouble(cre.FeeGross ?? 0),
                 TotalCostEstimate = 0,
-                TranDate = re.ActualEndDateEnrol?.Format("yyyy-MM-dd"),
-                Unapplied = decimal.ToDouble(re.FeeGross ?? 0)
+                TranDate = cre.ActualEndDateEnrol?.Format("yyyy-MM-dd"),
+                Unapplied = decimal.ToDouble(cre.FeeGross ?? 0),
+                AcademicYearStartDate = cre.AcademicYearStartDate,
+                AcademicYearEndDate = cre.AcademicYearEndDate,
+                UNITeStudentID = cre.StudentID,
+                UNITeEnrolmentID = cre.EnrolmentID
             }).ToList<NetSuiteCreditMemo>();
 
             return netSuiteCreditMemos ?? new List<NetSuiteCreditMemo>();
         }
 
-        public static IList<NetSuiteCustomerRefund> MapUNITeRefundsToNetSuiteCustomerRefunds(IList<UNITeRefund> uniteRefunds)
+        public static ICollection<NetSuiteCustomerRefund> MapUNITeRefundsToNetSuiteCustomerRefunds(ICollection<UNITeRefund> uniteRefunds)
         {
-            IList<NetSuiteCustomerRefund>? netSuiteCustomerRefunds = new List<NetSuiteCustomerRefund>();
-            int? numRecordsWithCustomerID = uniteRefunds.Where(f => f.NetSuiteCustomerID > 0).Count();
-
-            if (numRecordsWithCustomerID != uniteRefunds.Count())
-            {
-                Console.WriteLine($"Not all refund records are valid as {uniteRefunds.Count() - numRecordsWithCustomerID} do not have a customer ID assigned");
-                return new List<NetSuiteCustomerRefund>();
-            }
+            ICollection<NetSuiteCustomerRefund>? netSuiteCustomerRefunds = new List<NetSuiteCustomerRefund>();
+            int? numRecordsWithCustomerID = uniteRefunds.Where(f => f.NetSuiteCustomerID?.Length >= 1).Count();
 
             //Map UNIT-e Refunds to NetSuite Customer Refunds
             netSuiteCustomerRefunds = uniteRefunds?.Select(re => new NetSuiteCustomerRefund
@@ -576,7 +573,7 @@ namespace NetSuiteIntegration.Services
                 },
                 Customer = new NetSuiteCustomerRefundCustomer
                 {
-                    ID = re.NetSuiteCustomerID.ToString() //Ensure NetSuite Customer ID has been assigned to the UNIT-e Instance
+                    ID = re.NetSuiteCustomerID //Ensure NetSuite Customer ID has been assigned to the UNIT-e Instance
                 },
                 CustomForm = new NetSuiteCustomerRefundCustomForm
                 {
@@ -608,7 +605,11 @@ namespace NetSuiteIntegration.Services
                 },
                 ToBePrinted = false,
                 Total = decimal.ToDouble(re.FeeGross ?? 0),
-                TranDate = re.ActualEndDateEnrol?.Format("yyyy-MM-dd")
+                TranDate = re.ActualEndDateEnrol?.Format("yyyy-MM-dd"),
+                AcademicYearStartDate = re.AcademicYearStartDate,
+                AcademicYearEndDate = re.AcademicYearEndDate,
+                UNITeStudentID = re.StudentID,
+                UNITeEnrolmentID = re.EnrolmentID
             }).ToList<NetSuiteCustomerRefund>();
 
             return netSuiteCustomerRefunds ?? new List<NetSuiteCustomerRefund>();

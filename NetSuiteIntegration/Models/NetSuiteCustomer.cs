@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Text.Json.Serialization;
@@ -128,11 +129,18 @@ namespace NetSuiteIntegration.Models
 
         //Extra fields
         [JsonIgnore]
+        public DateTime? AcademicYearStartDate { get; set; }
+        [JsonIgnore]
+        public DateTime? AcademicYearEndDate { get; set; }
+        [JsonIgnore]
         public CustomerMatchType? CustomerMatchType { get; set; }
         [JsonIgnore]
         public RecordActionType? RecordActionType { get; set; }
         [JsonIgnore]
         public ICollection<NetSuiteAddressBook>? Addresses { get; set; }
+        [JsonIgnore]
+        [Column(TypeName = "decimal(16,0)")]
+        public decimal? UNITeStudentID { get; set; }
     }
 
     public enum CustomerMatchType

@@ -39,5 +39,8 @@ namespace NetSuiteIntegration.Models
         [Column(TypeName = "decimal(19,4)")]
         [DataType(DataType.Currency)]
         public decimal? Deposit { get; set; }
+
+        //Store NetSuite Sale Item ID once found for linking
+        public string? NetSuiteNonInventorySaleItemID { get; set; }
     }
 }

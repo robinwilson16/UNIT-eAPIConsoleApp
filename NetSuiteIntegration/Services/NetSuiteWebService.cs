@@ -107,7 +107,7 @@ namespace NetSuiteIntegration.Services
             //?q=isinactive IS true
             //?q=dateCreated ON_OR_AFTER "1/1/2019" AND dateCreated BEFORE "1/1/2020"
             //?q=creditlimit GREATER_OR_EQUAL 1000 OR creditlimit LESS_OR_EQUAL 10
-            //Use parenthesis to group the search parameters -- TODO
+            //Use parenthesis to group the search parameters
 
             bool debug = false;
 
@@ -171,10 +171,10 @@ namespace NetSuiteIntegration.Services
                                 numClosingParenthesis++;
                             }
 
-                            //If value is a string then need to add quotes around it so characters such as @ in email do not cause an error
+                            //If value is a string or a date then need to add quotes around it so characters such as @ in email do not cause an error
                             string? operatorDisplayName = param?.Operator?.GetEnumDisplayName();
 
-                            if (operatorDisplayName?.Contains("Text") == true)
+                            if (operatorDisplayName?.Contains("Text") == true || operatorDisplayName?.Contains("Date/Time") == true)
                             {
                                 valuePrefix = "\"";
                                 valueSuffix = "\"";

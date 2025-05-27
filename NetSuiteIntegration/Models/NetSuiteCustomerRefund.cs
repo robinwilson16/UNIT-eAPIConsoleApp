@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Text.Json.Serialization;
@@ -57,6 +58,12 @@ namespace NetSuiteIntegration.Models
         public CustomerRefundMatchType? CustomerRefundMatchType { get; set; }
         [JsonIgnore]
         public RecordActionType? RecordActionType { get; set; }
+        [JsonIgnore]
+        [Column(TypeName = "decimal(16,0)")]
+        public decimal? UNITeStudentID { get; set; }
+        [JsonIgnore]
+        [Column(TypeName = "decimal(16,0)")]
+        public decimal UNITeEnrolmentID { get; set; }
     }
 
     public enum CustomerRefundMatchType

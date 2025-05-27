@@ -74,9 +74,13 @@ namespace NetSuiteIntegration.Services
         public async Task<bool?> Testing()
         {
             //Test function to use to test getting, updating, inserting and deleting a single NetSuite Customer
+            NetSuiteCustomer? existingNetSuiteCustomer = new NetSuiteCustomer();
 
-            NetSuiteCustomer? existingNetSuiteCustomer = await _netsuite.Get<NetSuiteCustomer>("customer", 5753);
-            _log?.Information($"\nNetSuite Customer: {existingNetSuiteCustomer?.EntityID} - {existingNetSuiteCustomer?.FirstName} {existingNetSuiteCustomer?.LastName}");
+            if (_netsuite != null)
+            {
+                existingNetSuiteCustomer = await _netsuite.Get<NetSuiteCustomer>("customer", 5753);
+                _log?.Information($"\nNetSuite Customer: {existingNetSuiteCustomer?.EntityID} - {existingNetSuiteCustomer?.FirstName} {existingNetSuiteCustomer?.LastName}");
+            }
 
             //Testing
             //if (existingNetSuiteCustomer != null)
@@ -112,7 +116,8 @@ namespace NetSuiteIntegration.Services
 
         public async Task<bool?> DoImport(ICollection<UNITeRepGen>? repGens, bool? readOnly, bool? firstRecordOnly)
         {
-            bool? isOK = true;
+            bool? studentOK = true;
+            bool? courseOK = true;
 
             //Get RepGens used to extract the data from UNIT-e
             string? enrolmentRepGen = repGens?.FirstOrDefault(rg => rg.Type == UNITeRepGenType.Enrolment)?.Reference;
@@ -122,18 +127,39 @@ namespace NetSuiteIntegration.Services
             string? refundRepGen = repGens?.FirstOrDefault(rg => rg.Type == UNITeRepGenType.Refund)?.Reference;
 
             //Process the data
-            isOK = await ProcessEnrolments(enrolmentRepGen, readOnly, firstRecordOnly);
-            isOK = isOK == true ? await ProcessCourses(courseRepGen, readOnly, firstRecordOnly) : isOK;
-            isOK = isOK == true ? await ProcessFees(feeRepGen, readOnly, firstRecordOnly) : isOK;
-            isOK = isOK == true ? await ProcessCreditNotes(creditNoteRepGen, readOnly, firstRecordOnly) : isOK;
-            isOK = isOK == true ? await ProcessRefunds(refundRepGen, readOnly, firstRecordOnly) : isOK;
+            ICollection<NetSuiteCustomer>? uniteNetSuiteCustomers = await ProcessEnrolments(enrolmentRepGen, readOnly, firstRecordOnly);
+            ICollection<NetSuiteNonInventorySaleItem>? uniteNetSuiteNonInventorySaleItems = await ProcessCourses(courseRepGen, readOnly, firstRecordOnly);
 
-            return isOK;
+            //If empty lists are returned then there has been an error as there should always be students and courses in scope
+            if (uniteNetSuiteCustomers == null || uniteNetSuiteCustomers.Count == 0)
+            {
+                studentOK = false;
+            }
+            if (uniteNetSuiteNonInventorySaleItems == null || uniteNetSuiteNonInventorySaleItems.Count == 0)
+            {
+                courseOK = false;
+            }
+
+            //As long as students has items then process the fees, credit notes and refunds
+            studentOK = studentOK == true ? await ProcessFees(uniteNetSuiteCustomers, feeRepGen, readOnly, firstRecordOnly) : studentOK;
+            studentOK = studentOK == true ? await ProcessCreditNotes(uniteNetSuiteCustomers, creditNoteRepGen, readOnly, firstRecordOnly) : studentOK;
+            studentOK = studentOK == true ? await ProcessRefunds(uniteNetSuiteCustomers, refundRepGen, readOnly, firstRecordOnly) : studentOK;
+
+            if (studentOK == true && courseOK == true)
+                return true;
+            else
+                return false;
         }
 
-        public async Task<bool?> ProcessEnrolments(string? enrolmentRepGen, bool? readOnly, bool? firstRecordOnly)
+        public async Task<ICollection<NetSuiteCustomer>?> ProcessEnrolments(string? enrolmentRepGen, bool? readOnly, bool? firstRecordOnly)
         {
+            //Returns the Customers with the ID added so can be used in other methods
+
             _log?.Information($"\n{_divider}");
+
+            ICollection<NetSuiteCustomer>? uniteNetSuiteCustomers = new List<NetSuiteCustomer>();
+            ICollection<UNITeStudent>? uniteStudents = new List<UNITeStudent>();
+            ICollection<UNITeEnrolment>? uniteEnrolments = new List<UNITeEnrolment>();
 
             if (enrolmentRepGen != null && enrolmentRepGen.Length > 0)
             {
@@ -142,14 +168,7 @@ namespace NetSuiteIntegration.Services
             else
             {
                 _log?.Error("Enrolment RepGen is null/empty. Skipping Enrolment Import");
-                return true;
             }
-
-            bool? isOK = true;
-
-            IList<UNITeStudent>? uniteStudents = new List<UNITeStudent>();
-            IList<UNITeEnrolment>? uniteEnrolments = new List<UNITeEnrolment>();
-            IList<NetSuiteCustomer>? uniteNetSuiteCustomers = new List<NetSuiteCustomer>();
 
             try
             {
@@ -159,12 +178,10 @@ namespace NetSuiteIntegration.Services
                 if (uniteEnrolments == null)
                 {
                     _log?.Information("No UNIT-e Enrolments found.");
-                    return true;
                 }
                 else if (uniteEnrolments?.Count == 0)
                 {
                     _log?.Information("No UNIT-e Enrolments To Be Imported Currently.");
-                    return true;
                 }
                 else
                 {
@@ -245,6 +262,10 @@ namespace NetSuiteIntegration.Services
                                 {
                                     _log?.Information($"Synced Existing NetSuite Customer: {uniteNetSuiteCustomer?.ID}");
                                 }
+                                else if (readOnly == true)
+                                {
+                                    _log?.Information($"**Read Only Mode**: No Changes Made to NetSuite Customer: {uniteNetSuiteCustomer?.ID}");
+                                }
                                 else
                                 {
                                     _log?.Information($"No Changes Made to NetSuite Customer: {uniteNetSuiteCustomer?.ID}");
@@ -267,15 +288,19 @@ namespace NetSuiteIntegration.Services
             catch (Exception ex)
             {
                 _log?.Error($"Error Processing Enrolments: {ex.Message}");
-                isOK = false;
             }
 
-            return isOK;
+            return uniteNetSuiteCustomers;
         }
 
-        public async Task<bool?> ProcessCourses(string? courseRepGen, bool? readOnly, bool? firstRecordOnly)
+        public async Task<ICollection<NetSuiteNonInventorySaleItem>?> ProcessCourses(string? courseRepGen, bool? readOnly, bool? firstRecordOnly)
         {
+            //Returns the sale items with the ID added so can be used in other methods
+
             _log?.Information($"\n{_divider}");
+
+            ICollection<NetSuiteNonInventorySaleItem>? uniteNetSuiteNonInventorySaleItems = new List<NetSuiteNonInventorySaleItem>();
+            ICollection<UNITeCourse>? uniteCourses = new List<UNITeCourse>();
 
             if (courseRepGen != null && courseRepGen.Length > 0)
             {
@@ -284,13 +309,7 @@ namespace NetSuiteIntegration.Services
             else
             {
                 _log?.Error("Course RepGen is null/empty. Skipping Course Import");
-                return true;
             }
-
-            bool? isOK = true;
-
-            IList<UNITeCourse>? uniteCourses = new List<UNITeCourse>();
-            IList<NetSuiteNonInventorySaleItem>? uniteNetSuiteNonInventorySaleItems = new List<NetSuiteNonInventorySaleItem>();
 
             try
             {
@@ -300,12 +319,10 @@ namespace NetSuiteIntegration.Services
                 if (uniteCourses == null)
                 {
                     _log?.Information("No UNIT-e Courses found.");
-                    return true;
                 }
                 else if (uniteCourses?.Count == 0)
                 {
                     _log?.Information("No UNIT-e Courses To Be Imported Currently.");
-                    return true;
                 }
                 else
                 {
@@ -356,6 +373,10 @@ namespace NetSuiteIntegration.Services
                                 {
                                     _log?.Information($"Synced Existing NetSuite Non-Inventory Sale Item: {saleItem?.ID}");
                                 }
+                                else if (readOnly == true)
+                                {
+                                    _log?.Information($"**Read Only Mode**: No Changes Made to NetSuite Non-Inventory Sale Item: {saleItem?.ID}");
+                                }
                                 else
                                 {
                                     _log?.Information($"No Changes Made to NetSuite Non-Inventory Sale Item: {saleItem?.ID}");
@@ -372,15 +393,18 @@ namespace NetSuiteIntegration.Services
             catch (Exception ex)
             {
                 _log?.Error($"Error Processing Courses: {ex.Message}");
-                return false;
             }
 
-            return isOK;
+            return uniteNetSuiteNonInventorySaleItems;
         }
 
-        public async Task<bool?> ProcessFees(string? feeRepGen, bool? readOnly, bool? firstRecordOnly)
+        public async Task<bool?> ProcessFees(ICollection<NetSuiteCustomer>? customers, string? feeRepGen, bool? readOnly, bool? firstRecordOnly)
         {
             _log?.Information($"\n{_divider}");
+
+            ICollection<UNITeFee>? uniteFees = new List<UNITeFee>();
+            ICollection<UNITeFee>? uniteFeesWithCustomerID = new List<UNITeFee>();
+            ICollection<NetSuiteInvoice>? uniteNetSuiteInvoices = new List<NetSuiteInvoice>();
 
             if (feeRepGen != null && feeRepGen.Length > 0)
             {
@@ -393,9 +417,6 @@ namespace NetSuiteIntegration.Services
             }
 
             bool? isOK = true;
-
-            IList<UNITeFee>? uniteFees = new List<UNITeFee>();
-            IList<NetSuiteInvoice>? uniteNetSuiteInvoices = new List<NetSuiteInvoice>();
 
             try
             {
@@ -416,8 +437,29 @@ namespace NetSuiteIntegration.Services
                 {
                     _log?.Information($"Loaded {uniteFees?.Count} UNIT-e Fees");
 
+                    //Add Customer ID from related Customer Record to UNITe Fees
+                    if (customers != null && customers.Count > 0)
+                    {
+                        foreach (UNITeFee? fee in uniteFees!)
+                        {
+                            if (fee != null)
+                            {
+                                fee.NetSuiteCustomerID = customers
+                                    .Where(c => c.UNITeStudentID == fee.StudentID)
+                                    .Select(c => c.ID)
+                                    .FirstOrDefault();
+                            }
+                        }
+                    }
+
+                    uniteFeesWithCustomerID = uniteFees?
+                        .Where(f => f.NetSuiteCustomerID != null)
+                        .ToList();
+
+                    _log?.Information($"{uniteFeesWithCustomerID?.Count} UNIT-e Fees Linked Back to NetSuite Customers");
+
                     if (uniteFees != null)
-                        uniteNetSuiteInvoices = ModelMappings.MapUNITeFeesToNetSuiteInvoices(uniteFees);
+                        uniteNetSuiteInvoices = ModelMappings.MapUNITeFeesToNetSuiteInvoices(uniteFeesWithCustomerID ?? new List<UNITeFee>());
 
                     if (uniteNetSuiteInvoices != null)
                     {
@@ -461,6 +503,10 @@ namespace NetSuiteIntegration.Services
                                 {
                                     _log?.Information($"Synced Existing NetSuite Invoice: {invoice?.ID}");
                                 }
+                                else if (readOnly == true)
+                                {
+                                    _log?.Information($"**Read Only Mode**: No Changes Made to NetSuite Invoice: {invoice?.ID}");
+                                }
                                 else
                                 {
                                     _log?.Information($"No Changes Made to NetSuite Invoice: {invoice?.ID}");
@@ -483,9 +529,13 @@ namespace NetSuiteIntegration.Services
             return isOK;
         }
 
-        public async Task<bool?> ProcessCreditNotes(string? creditNoteRepGen, bool? readOnly, bool? firstRecordOnly)
+        public async Task<bool?> ProcessCreditNotes(ICollection<NetSuiteCustomer>? customers, string? creditNoteRepGen, bool? readOnly, bool? firstRecordOnly)
         {
             _log?.Information($"\n{_divider}");
+
+            ICollection<UNITeCreditNote>? uniteCreditNotes = new List<UNITeCreditNote>();
+            ICollection<UNITeCreditNote>? uniteCreditNotesWithCustomerID = new List<UNITeCreditNote>();
+            ICollection<NetSuiteCreditMemo>? uniteNetSuiteCreditMemos = new List<NetSuiteCreditMemo>();
 
             if (creditNoteRepGen != null && creditNoteRepGen.Length > 0)
             {
@@ -498,9 +548,6 @@ namespace NetSuiteIntegration.Services
             }
 
             bool? isOK = true;
-
-            IList<UNITeCreditNote>? uniteCreditNotes = new List<UNITeCreditNote>();
-            IList<NetSuiteCreditMemo>? uniteNetSuiteCreditMemos = new List<NetSuiteCreditMemo>();
 
             try
             {
@@ -521,8 +568,29 @@ namespace NetSuiteIntegration.Services
                 {
                     _log?.Information($"Loaded {uniteCreditNotes?.Count} UNIT-e Credit Notes");
 
+                    //Add Customer ID from related Customer Record to UNITe Fees
+                    if (customers != null && customers.Count > 0)
+                    {
+                        foreach (UNITeCreditNote? fee in uniteCreditNotes!)
+                        {
+                            if (fee != null)
+                            {
+                                fee.NetSuiteCustomerID = customers
+                                    .Where(c => c.UNITeStudentID == fee.StudentID)
+                                    .Select(c => c.ID)
+                                    .FirstOrDefault();
+                            }
+                        }
+                    }
+
+                    uniteCreditNotesWithCustomerID = uniteCreditNotes?
+                        .Where(f => f.NetSuiteCustomerID != null)
+                        .ToList();
+
+                    _log?.Information($"{uniteCreditNotesWithCustomerID?.Count} UNIT-e Fees Linked Back to NetSuite Customers");
+
                     if (uniteCreditNotes != null)
-                        uniteNetSuiteCreditMemos = ModelMappings.MapUNITeCreditNotesToNetSuiteCreditMemos(uniteCreditNotes);
+                        uniteNetSuiteCreditMemos = ModelMappings.MapUNITeCreditNotesToNetSuiteCreditMemos(uniteCreditNotesWithCustomerID ?? new List<UNITeCreditNote>());
 
                     if (uniteNetSuiteCreditMemos != null)
                     {
@@ -566,6 +634,10 @@ namespace NetSuiteIntegration.Services
                                 {
                                     _log?.Information($"Synced Existing NetSuite Credit Memo: {creditMemo?.ID}");
                                 }
+                                else if (readOnly == true)
+                                {
+                                    _log?.Information($"**Read Only Mode**: No Changes Made to NetSuite Credit Memo: {creditMemo?.ID}");
+                                }
                                 else
                                 {
                                     _log?.Information($"No Changes Made to NetSuite Credit Memo: {creditMemo?.ID}");
@@ -588,9 +660,13 @@ namespace NetSuiteIntegration.Services
             return isOK;
         }
 
-        public async Task<bool?> ProcessRefunds(string? refundRepGen, bool? readOnly, bool? firstRecordOnly)
+        public async Task<bool?> ProcessRefunds(ICollection<NetSuiteCustomer>? customers, string? refundRepGen, bool? readOnly, bool? firstRecordOnly)
         {
             _log?.Information($"\n{_divider}");
+
+            ICollection<UNITeRefund>? uniteRefunds = new List<UNITeRefund>();
+            ICollection<UNITeRefund>? uniteRefundsWithCustomerID = new List<UNITeRefund>();
+            ICollection<NetSuiteCustomerRefund>? uniteNetSuiteCustomerRefunds = new List<NetSuiteCustomerRefund>();
 
             if (refundRepGen != null && refundRepGen.Length > 0)
             {
@@ -603,9 +679,6 @@ namespace NetSuiteIntegration.Services
             }
 
             bool? isOK = true;
-
-            IList<UNITeRefund>? uniteRefunds = new List<UNITeRefund>();
-            IList<NetSuiteCustomerRefund>? uniteNetSuiteCustomerRefunds = new List<NetSuiteCustomerRefund>();
 
             try
             {
@@ -626,8 +699,29 @@ namespace NetSuiteIntegration.Services
                 {
                     _log?.Information($"Loaded {uniteRefunds?.Count} UNIT-e Refunds");
 
+                    //Add Customer ID from related Customer Record to UNITe Fees
+                    if (customers != null && customers.Count > 0)
+                    {
+                        foreach (UNITeRefund? fee in uniteRefunds!)
+                        {
+                            if (fee != null)
+                            {
+                                fee.NetSuiteCustomerID = customers
+                                    .Where(c => c.UNITeStudentID == fee.StudentID)
+                                    .Select(c => c.ID)
+                                    .FirstOrDefault();
+                            }
+                        }
+                    }
+
+                    uniteRefundsWithCustomerID = uniteRefunds?
+                        .Where(f => f.NetSuiteCustomerID != null)
+                        .ToList();
+
+                    _log?.Information($"{uniteRefundsWithCustomerID?.Count} UNIT-e Refunds Linked Back to NetSuite Customers");
+
                     if (uniteRefunds != null)
-                        uniteNetSuiteCustomerRefunds = ModelMappings.MapUNITeRefundsToNetSuiteCustomerRefunds(uniteRefunds);
+                        uniteNetSuiteCustomerRefunds = ModelMappings.MapUNITeRefundsToNetSuiteCustomerRefunds(uniteRefundsWithCustomerID ?? new List<UNITeRefund>());
 
                     if (uniteNetSuiteCustomerRefunds != null)
                     {
@@ -670,6 +764,10 @@ namespace NetSuiteIntegration.Services
                                 else if (updatedNetSuiteCustomerRefund?.RecordActionType == RecordActionType.Update)
                                 {
                                     _log?.Information($"Synced Existing NetSuite Customer Refund: {refund?.ID}");
+                                }
+                                else if (readOnly == true)
+                                {
+                                    _log?.Information($"**Read Only Mode**: No Changes Made to NetSuite Customer Refund: {refund?.ID}");
                                 }
                                 else
                                 {

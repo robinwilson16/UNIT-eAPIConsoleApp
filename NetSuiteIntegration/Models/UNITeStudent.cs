@@ -365,6 +365,6 @@ namespace NetSuiteIntegration.Models
 
         //Store NetSuite Customer ID once found for linking
         [JsonIgnore]
-        public int? NetSuiteCustomerID { get; set; }
+        public string? NetSuiteCustomerID { get; set; }
     }
 }
