@@ -1313,14 +1313,20 @@ namespace NetSuiteIntegration.Services
             {
                 sqlQuery = new NetSuiteSQLQuery
                 {
-                    Q = @$"SELECT T.* FROM Transaction T 
+                    Q = @$"
+                    SELECT 
+                        T.* 
+                    FROM Transaction T 
+                    INNER JOIN TransactionLine TL 
+                        ON TL.Transaction = T.ID
                     WHERE 
                         T.Entity = {netSuiteInvoice.Entity?.ID} 
                         AND T.AbbrevType = 'INV' 
                         AND T.TranDate >= '{netSuiteInvoice?.AcademicYearStartDate?.Format("dd/MM/yyyy")}' 
                         AND T.TranDate <= '{netSuiteInvoice?.AcademicYearEndDate?.Format("dd/MM/yyyy")}'
-                        AND T.ForeignTotal = {netSuiteInvoice?.Total}
-                        AND T.Memo = '{netSuiteInvoice?.Memo}'"
+                        AND T.Memo = '{netSuiteInvoice?.Memo}'
+                        AND TL.Amount = {netSuiteInvoice?.Total}
+                    "
                 };
 
                 matchedInvoice = await FindNetSuiteSQLInvoice(sqlQuery, InvoiceMatchType.ByCustomerIDAndAmount);
@@ -1581,13 +1587,19 @@ namespace NetSuiteIntegration.Services
             {
                 sqlQuery = new NetSuiteSQLQuery
                 {
-                    Q = @$"SELECT T.* FROM Transaction T 
+                    Q = @$"
+                    SELECT 
+                        T.* 
+                    FROM Transaction T 
+                    INNER JOIN TransactionLine TL 
+                        ON TL.Transaction = T.ID
                     WHERE 
                         T.Entity = {netSuiteCreditMemo.Entity?.ID} 
                         AND T.AbbrevType = 'CREDMEM' 
                         AND T.TranDate >= '{netSuiteCreditMemo?.AcademicYearStartDate?.Format("dd/MM/yyyy")}' 
                         AND T.TranDate <= '{netSuiteCreditMemo?.AcademicYearEndDate?.Format("dd/MM/yyyy")}'
-                        AND T.ForeignTotal = {netSuiteCreditMemo?.Total}"
+                        AND TL.Amount = {netSuiteCreditMemo?.Total}
+                    "
                 };
 
                 matchedCreditMemo = await FindNetSuiteSQLCreditMemo(sqlQuery, CreditMemoMatchType.ByCustomerIDAndAmount);
@@ -1819,13 +1831,19 @@ namespace NetSuiteIntegration.Services
             {
                 sqlQuery = new NetSuiteSQLQuery
                 {
-                    Q = @$"SELECT T.* FROM Transaction T 
+                    Q = @$"
+                    SELECT 
+                        T.* 
+                    FROM Transaction T 
+                    INNER JOIN TransactionLine TL 
+                        ON TL.Transaction = T.ID
                     WHERE 
                         T.Entity = {netSuiteCustomerRefund.Customer?.ID} 
                         AND T.AbbrevType = 'RFND' 
                         AND T.TranDate >= '{netSuiteCustomerRefund?.AcademicYearStartDate?.Format("dd/MM/yyyy")}' 
                         AND T.TranDate <= '{netSuiteCustomerRefund?.AcademicYearEndDate?.Format("dd/MM/yyyy")}'
-                        AND T.ForeignTotal = {netSuiteCustomerRefund?.Total}"
+                        AND TL.Amount = {netSuiteCustomerRefund?.Total}
+                    "
                 };
 
                 matchedCustomerRefund = await FindNetSuiteSQLCustomerRefund(sqlQuery, CustomerRefundMatchType.ByCustomerIDAndAmount);
