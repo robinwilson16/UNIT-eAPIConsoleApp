@@ -38,6 +38,15 @@ namespace NetSuiteIntegration.Interfaces
         Task<T?> Search<T>(string? objectType, IList<NetSuiteSearchParameter> searchParameters);
 
         /// <summary>
+        /// Gets a set of records from NetSuite by their Type and returns either all items or a filtered set of items based on the SQL query provided.
+        /// </summary>
+        /// <typeparam name="T">A custom data model representing the expected return structure</typeparam>
+        /// <param name="objectType">The type of object to be returned</param>
+        /// <param name="sqlQuery">The SQL query to select either specific fields or all fields and may contain a WHERE clause to filter the resultset</param>
+        /// <returns>A set of records of the specified type, else null</returns>
+        Task<T?> SearchSQL<T>(string? objectType, NetSuiteSQLQuery sqlQuery);
+
+        /// <summary>
         /// Adds a record to NetSuite by its Type and returns the newly added object
         /// </summary>
         /// <typeparam name="T">A custom data model representing the expected return structure</typeparam>

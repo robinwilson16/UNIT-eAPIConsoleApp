@@ -398,7 +398,7 @@ namespace NetSuiteIntegration.Services
                     RefName = "20709 Debtors Control Account"
                 },
                 AmountPaid = 0,
-                AmountRemaining = decimal.ToDouble(cre.FeeGross ?? 0),
+                AmountRemaining = 0 - decimal.ToDouble(cre.FeeGross ?? 0),
                 Applied = 0,
                 AsOfDate = cre.ActualEndDateEnrol?.Format("yyyy-MM-dd"),
                 BillAddress = cre.AddressMainEncoded,
@@ -452,8 +452,8 @@ namespace NetSuiteIntegration.Services
                 CustbodySiiArticle7273 = false,
                 CustbodySiiIsThirdParty = false,
                 CustbodySiiNotReportedInTime = false,
-                CustbodyZncGbpEquivNet = decimal.ToDouble(cre.FeeGross ?? 0),
-                CustbodyZncGbpEquivTotal = decimal.ToDouble(cre.FeeGross ?? 0),
+                CustbodyZncGbpEquivNet = 0 - decimal.ToDouble(cre.FeeGross ?? 0),
+                CustbodyZncGbpEquivTotal = 0 - decimal.ToDouble(cre.FeeGross ?? 0),
                 CustbodyZncGbpEquivVat = 0,
                 CustomForm = new NetSuiteCreditMemoCustomForm
                 {
@@ -471,7 +471,7 @@ namespace NetSuiteIntegration.Services
                 {
                     ID = cre.NetSuiteCustomerID //Ensure NetSuite Customer ID has been assigned to the UNIT-e Instance
                 },
-                EstGrossProfit = decimal.ToDouble(cre.FeeGross ?? 0),
+                EstGrossProfit = 0 - decimal.ToDouble(cre.FeeGross ?? 0),
                 EstGrossProfitPercent = 100.0,
                 ExchangeRate = 1.0,
                 ExcludeFromGLNumbering = false,
@@ -509,14 +509,14 @@ namespace NetSuiteIntegration.Services
                 {
                     RefName = cre.CampusName
                 },
-                Subtotal = decimal.ToDouble(cre.FeeGross ?? 0),
+                Subtotal = 0 - decimal.ToDouble(cre.FeeGross ?? 0),
                 ToBeEmailed = false,
                 ToBeFaxed = false,
                 ToBePrinted = false,
-                Total = decimal.ToDouble(cre.FeeGross ?? 0),
+                Total = 0 - decimal.ToDouble(cre.FeeGross ?? 0),
                 TotalCostEstimate = 0,
                 TranDate = cre.ActualEndDateEnrol?.Format("yyyy-MM-dd"),
-                Unapplied = decimal.ToDouble(cre.FeeGross ?? 0),
+                Unapplied = 0 - decimal.ToDouble(cre.FeeGross ?? 0),
                 AcademicYearStartDate = cre.AcademicYearStartDate,
                 AcademicYearEndDate = cre.AcademicYearEndDate,
                 UNITeStudentID = cre.StudentID,
@@ -604,7 +604,7 @@ namespace NetSuiteIntegration.Services
                     RefName = re.CampusName
                 },
                 ToBePrinted = false,
-                Total = decimal.ToDouble(re.FeeGross ?? 0),
+                Total = 0 - decimal.ToDouble(re.FeeGross ?? 0),
                 TranDate = re.ActualEndDateEnrol?.Format("yyyy-MM-dd"),
                 AcademicYearStartDate = re.AcademicYearStartDate,
                 AcademicYearEndDate = re.AcademicYearEndDate,

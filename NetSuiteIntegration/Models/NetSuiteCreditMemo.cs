@@ -127,7 +127,8 @@ namespace NetSuiteIntegration.Models
 
     public enum CreditMemoMatchType
     {
-        ByCourseCode,
+        ByAcademicYear,
+        ByCustomerIDAndAmount,
         NotFound
     }
 }

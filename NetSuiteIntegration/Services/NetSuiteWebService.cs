@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using UNITe.XMLExporter.Entities;
 using static System.Runtime.InteropServices.JavaScript.JSType;
@@ -210,6 +211,63 @@ namespace NetSuiteIntegration.Services
                 }
 
                 HttpResponseMessage response = await _httpClient.GetAsync(objectURL);
+
+                if (response.StatusCode == HttpStatusCode.NoContent)
+                {
+                    return default(T);
+                }
+                else if (response.IsSuccessStatusCode)
+                {
+                    reportData = await response.Content.ReadFromJsonAsync<T>();
+                    return reportData;
+                }
+                else
+                {
+                    string? errorMessage = response.Content.ReadAsStringAsync().Result;
+                    _Log.Error($"Failed to get the {objectType} records due to error ({response.StatusCode}): {errorMessage}");
+                    return default(T);
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                _Log.Error($"Failed to get the {objectType} records due to error {ex.Message}");
+                return default(T);
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task<T?> SearchSQL<T>(string? objectType, NetSuiteSQLQuery sqlQuery)
+        {
+            //objectType is only used for display purposes and for consistency with other methods
+            //Usage
+            //SELECT T.* FROM Transaction T WHERE T.Entity = 88563 AND T.AbbrevType = 'INV' AND T.TranDate >= '01/09/2024' AND T.TranDate <= '31/07/2025'
+            bool debug = false;
+
+            T? reportData = default;
+
+            if (sqlQuery == null || string.IsNullOrEmpty(sqlQuery.Q))
+            {
+                _Log.Error($"The SQL query for {objectType} is not valid");
+                return default(T);
+            }
+
+            try
+            {
+                HttpClient _httpClient = new HttpClient(new OAuth1Handler(_Settings));
+                _httpClient.BaseAddress = new Uri(_Settings.NetSuiteURL ?? "");
+                _httpClient.DefaultRequestHeaders.Add("Prefer", "transient");
+
+                string? objectURL = $"query/v1/suiteql";
+
+                if (debug == true)
+                {
+                    _Log.Information($"Searching for {objectType} with URL: {objectURL}");
+                }
+
+                //string sqlQueryString = JsonSerializer.Serialize(sqlQuery);
+                //HttpContent httpContent = new StringContent(sqlQueryString, Encoding.UTF8, "application/json");
+
+                HttpResponseMessage response = await _httpClient.PostAsJsonAsync(objectURL, sqlQuery);
 
                 if (response.StatusCode == HttpStatusCode.NoContent)
                 {

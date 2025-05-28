@@ -111,6 +111,8 @@ namespace NetSuiteIntegration.Services
             //Delete a record
             //bool? isDeleted = await _netsuite.Delete<NetSuiteCustomer>("customer", 111005);
 
+
+
             return true;
         }
 
@@ -160,6 +162,7 @@ namespace NetSuiteIntegration.Services
             ICollection<NetSuiteCustomer>? uniteNetSuiteCustomers = new List<NetSuiteCustomer>();
             ICollection<UNITeStudent>? uniteStudents = new List<UNITeStudent>();
             ICollection<UNITeEnrolment>? uniteEnrolments = new List<UNITeEnrolment>();
+            NetSuiteCustomer? matchedCustomer = new NetSuiteCustomer();
 
             if (enrolmentRepGen != null && enrolmentRepGen.Length > 0)
             {
@@ -205,7 +208,7 @@ namespace NetSuiteIntegration.Services
 
                             #region Find Customer and Related Datasets
                             //Find this student (customer) in NetSuite
-                            NetSuiteCustomer? matchedCustomer = await GetNetSuiteCustomer(uniteNetSuiteCustomer ?? new NetSuiteCustomer());
+                            matchedCustomer = await GetNetSuiteCustomer(uniteNetSuiteCustomer ?? new NetSuiteCustomer());
 
                             if (matchedCustomer?.CustomerMatchType == CustomerMatchType.ByStudentRef)
                                 _log?.Information($"Customer Found in NetSuite by Student Ref with NetSuite Customer ID: {matchedCustomer?.ID}");
@@ -301,6 +304,7 @@ namespace NetSuiteIntegration.Services
 
             ICollection<NetSuiteNonInventorySaleItem>? uniteNetSuiteNonInventorySaleItems = new List<NetSuiteNonInventorySaleItem>();
             ICollection<UNITeCourse>? uniteCourses = new List<UNITeCourse>();
+            NetSuiteNonInventorySaleItem? matchedSaleItem = new NetSuiteNonInventorySaleItem();
 
             if (courseRepGen != null && courseRepGen.Length > 0)
             {
@@ -341,7 +345,7 @@ namespace NetSuiteIntegration.Services
 
                             #region Find Non-Inventory Sale Item
                             //Find this course (non-inventory sale item) in NetSuite
-                            NetSuiteNonInventorySaleItem? matchedSaleItem = await GetNetSuiteNonInventorySaleItem(saleItem ?? new NetSuiteNonInventorySaleItem());
+                            matchedSaleItem = await GetNetSuiteNonInventorySaleItem(saleItem ?? new NetSuiteNonInventorySaleItem());
 
                             if (matchedSaleItem?.NonInventorySaleItemMatchType == NonInventorySaleItemMatchType.ByCourseCode)
                                 _log?.Information($"Course Found in NetSuite by Course Code with NetSuite Non-Inventory Sale Item ID: {matchedSaleItem?.ID}");
@@ -405,6 +409,7 @@ namespace NetSuiteIntegration.Services
             ICollection<UNITeFee>? uniteFees = new List<UNITeFee>();
             ICollection<UNITeFee>? uniteFeesWithCustomerID = new List<UNITeFee>();
             ICollection<NetSuiteInvoice>? uniteNetSuiteInvoices = new List<NetSuiteInvoice>();
+            NetSuiteInvoice? matchedInvoice = new NetSuiteInvoice();
 
             if (feeRepGen != null && feeRepGen.Length > 0)
             {
@@ -467,14 +472,15 @@ namespace NetSuiteIntegration.Services
                         foreach (NetSuiteInvoice? invoice in uniteNetSuiteInvoices!)
                         {
                             rowNumber++;
-                            _log?.Information($"\nRecord {rowNumber} of {uniteNetSuiteInvoices.Count}: Searching for invoice to {invoice?.Email} for {invoice?.Total?.Format("C2")} in NetSuite");
+                            _log?.Information($"\nRecord {rowNumber} of {uniteNetSuiteInvoices.Count}: Searching for invoice to Customer ID {invoice?.Entity?.RefName} for {invoice?.Total?.Format("C2")} in NetSuite");
 
                             #region Find Invoice
                             //Find this fee (invoice) in NetSuite
-                            NetSuiteInvoice? matchedInvoice = await GetNetSuiteInvoice(invoice ?? new NetSuiteInvoice());
+                            //matchedInvoice = await GetNetSuiteInvoiceByCustomer(invoice ?? new NetSuiteInvoice());
+                            matchedInvoice = await GetNetSuiteSQLInvoiceByCustomer(invoice ?? new NetSuiteInvoice());
 
-                            if (matchedInvoice?.InvoiceMatchType == InvoiceMatchType.ByCourseCode)
-                                _log?.Information($"Fee Found in NetSuite by Course Code with NetSuite Invoice Item ID: {matchedInvoice?.ID}");
+                            if (matchedInvoice?.InvoiceMatchType == InvoiceMatchType.ByCustomerIDAndAmount)
+                                _log?.Information($"Fee Found in NetSuite by Customer ID and Total Amount with NetSuite Invoice Item ID: {matchedInvoice?.ID}");
                             else
                                 _log?.Information($"Fee Not Found in NetSuite");
 
@@ -536,6 +542,7 @@ namespace NetSuiteIntegration.Services
             ICollection<UNITeCreditNote>? uniteCreditNotes = new List<UNITeCreditNote>();
             ICollection<UNITeCreditNote>? uniteCreditNotesWithCustomerID = new List<UNITeCreditNote>();
             ICollection<NetSuiteCreditMemo>? uniteNetSuiteCreditMemos = new List<NetSuiteCreditMemo>();
+            NetSuiteCreditMemo? matchedCreditMemo = new NetSuiteCreditMemo();
 
             if (creditNoteRepGen != null && creditNoteRepGen.Length > 0)
             {
@@ -598,14 +605,14 @@ namespace NetSuiteIntegration.Services
                         foreach (NetSuiteCreditMemo? creditMemo in uniteNetSuiteCreditMemos!)
                         {
                             rowNumber++;
-                            _log?.Information($"\nRecord {rowNumber} of {uniteNetSuiteCreditMemos.Count}: Searching for credit note to {creditMemo?.Email} for {creditMemo?.Total?.Format("C2")} in NetSuite");
+                            _log?.Information($"\nRecord {rowNumber} of {uniteNetSuiteCreditMemos.Count}: Searching for credit note to Customer {creditMemo?.Entity?.RefName} for {creditMemo?.Total?.Format("C2")} in NetSuite");
 
                             #region Find Credit Note
                             //Find this credit note (credit memo) in NetSuite
-                            NetSuiteCreditMemo? matchedCreditMemo = await GetNetSuiteCreditMemo(creditMemo ?? new NetSuiteCreditMemo());
+                            matchedCreditMemo = await GetNetSuiteSQLCreditMemo(creditMemo ?? new NetSuiteCreditMemo());
 
-                            if (matchedCreditMemo?.CreditMemoMatchType == CreditMemoMatchType.ByCourseCode)
-                                _log?.Information($"Credit Note Found in NetSuite by Course Code with NetSuite Credit Memo Item ID: {matchedCreditMemo?.ID}");
+                            if (matchedCreditMemo?.CreditMemoMatchType == CreditMemoMatchType.ByCustomerIDAndAmount)
+                                _log?.Information($"Credit Note Found in NetSuite by Customer ID and Total Amount with NetSuite Credit Memo Item ID: {matchedCreditMemo?.ID}");
                             else
                                 _log?.Information($"Credit Note Not Found in NetSuite");
 
@@ -667,6 +674,7 @@ namespace NetSuiteIntegration.Services
             ICollection<UNITeRefund>? uniteRefunds = new List<UNITeRefund>();
             ICollection<UNITeRefund>? uniteRefundsWithCustomerID = new List<UNITeRefund>();
             ICollection<NetSuiteCustomerRefund>? uniteNetSuiteCustomerRefunds = new List<NetSuiteCustomerRefund>();
+            NetSuiteCustomerRefund? matchedCustomerRefund = new NetSuiteCustomerRefund();
 
             if (refundRepGen != null && refundRepGen.Length > 0)
             {
@@ -729,14 +737,14 @@ namespace NetSuiteIntegration.Services
                         foreach (NetSuiteCustomerRefund? refund in uniteNetSuiteCustomerRefunds!)
                         {
                             rowNumber++;
-                            _log?.Information($"\nRecord {rowNumber} of {uniteNetSuiteCustomerRefunds.Count}: Searching for refund to {refund?.Customer?.RefName} for {refund?.Total?.Format("C2")} in NetSuite");
+                            _log?.Information($"\nRecord {rowNumber} of {uniteNetSuiteCustomerRefunds.Count}: Searching for refund to Customer {refund?.Customer?.RefName} for {refund?.Total?.Format("C2")} in NetSuite");
 
                             #region Find Refund
                             //Find this refund (customer refund) in NetSuite
-                            NetSuiteCustomerRefund? matchedCustomerRefund = await GetNetSuiteCustomerRefund(refund ?? new NetSuiteCustomerRefund());
+                            matchedCustomerRefund = await GetNetSuiteSQLCustomerRefund(refund ?? new NetSuiteCustomerRefund());
 
                             if (matchedCustomerRefund?.CustomerRefundMatchType == CustomerRefundMatchType.ByCustomerIDAndAmount)
-                                _log?.Information($"Refund Found in NetSuite by Customer ID and Amount with NetSuite Customer Refund Item ID: {matchedCustomerRefund?.ID}");
+                                _log?.Information($"Refund Found in NetSuite by Customer ID and Total Amount with NetSuite Customer Refund Item ID: {matchedCustomerRefund?.ID}");
                             else
                                 _log?.Information($"Refund Not Found in NetSuite");
 
@@ -824,7 +832,6 @@ namespace NetSuiteIntegration.Services
             NetSuiteCustomer? matchedCustomer = new NetSuiteCustomer();
             IList<NetSuiteSearchParameter> searchParameters = new List<NetSuiteSearchParameter>();
             NetSuiteSearchParameter param = new NetSuiteSearchParameter();
-            NetSuiteSearchResult? searchResults = new NetSuiteSearchResult();
 
             //Check if the customer already exists in NetSuite by their Student Ref
             if (matchedCustomer?.ID == null)
@@ -1144,7 +1151,6 @@ namespace NetSuiteIntegration.Services
             NetSuiteNonInventorySaleItem? matchedSaleItem = new NetSuiteNonInventorySaleItem();
             IList<NetSuiteSearchParameter> searchParameters = new List<NetSuiteSearchParameter>();
             NetSuiteSearchParameter param = new NetSuiteSearchParameter();
-            NetSuiteSearchResult? searchResults = new NetSuiteSearchResult();
 
             //Check if the course already exists in NetSuite by the course code
             if (matchedSaleItem?.ID == null)
@@ -1248,12 +1254,93 @@ namespace NetSuiteIntegration.Services
             }
         }
 
-        public async Task<NetSuiteInvoice> GetNetSuiteInvoice(NetSuiteInvoice netSuiteInvoice)
+        public async Task<NetSuiteInvoice> GetNetSuiteInvoiceByCustomer(NetSuiteInvoice netSuiteInvoice)
+        {
+            //Check if the invoice already exists in NetSuite by first returning all invoices for the academic year (to avoid returning too many records)
+            //and then filtering by the customer and the amount as this is not possible in the NetSuite REST API directly as it does not support
+            //querying sub-elements
+
+            ICollection<NetSuiteInvoice>? allCustomerInvoices = new List<NetSuiteInvoice>();
+            NetSuiteInvoice? matchedInvoice = new NetSuiteInvoice();
+            IList<NetSuiteSearchParameter> searchParameters = new List<NetSuiteSearchParameter>();
+            NetSuiteSearchParameter param = new NetSuiteSearchParameter();
+
+            searchParameters = new List<NetSuiteSearchParameter>();
+
+            param = AddNetSuiteSearchParameter(null, "tranDate", Operator.ON_OR_AFTER, netSuiteInvoice?.AcademicYearStartDate?.Format("dd/MM/yyyy"));
+            searchParameters.Add(param);
+            param = AddNetSuiteSearchParameter(null, "tranDate", Operator.ON_OR_BEFORE, netSuiteInvoice?.AcademicYearEndDate?.Format("dd/MM/yyyy"));
+            searchParameters.Add(param);
+
+            allCustomerInvoices = await FindNetSuiteInvoices(searchParameters, InvoiceMatchType.ByAcademicYear);
+            _log?.Information($"Found {allCustomerInvoices?.Count} invoices between {netSuiteInvoice?.AcademicYearStartDate?.Format("dd/MM/yyyy")} and {netSuiteInvoice?.AcademicYearEndDate?.Format("dd/MM/yyyy")}");
+
+            if (allCustomerInvoices != null)
+            {
+                foreach (NetSuiteInvoice? invoice in allCustomerInvoices)
+                {
+                    if (invoice != null && invoice.Entity != null)
+                    {
+                        //Check if the invoice matches the customer ID and total amount
+                        if (invoice.Entity.ID == netSuiteInvoice?.Entity?.ID
+                            && invoice.Total == netSuiteInvoice?.Total)
+                        {
+                            matchedInvoice = invoice;
+                            matchedInvoice.InvoiceMatchType = InvoiceMatchType.ByCustomerIDAndAmount;
+                            break; //Exit loop as match is found
+                        }
+                    }
+                }
+            }
+
+            if (matchedInvoice?.ID == null)
+            {
+                //If no match found then create a new invoice
+                matchedInvoice = new NetSuiteInvoice();
+                matchedInvoice.InvoiceMatchType = InvoiceMatchType.NotFound;
+            }
+
+            return matchedInvoice ?? new NetSuiteInvoice();
+        }
+
+        public async Task<NetSuiteInvoice> GetNetSuiteSQLInvoiceByCustomer(NetSuiteInvoice netSuiteInvoice)
+        {
+            NetSuiteInvoice? matchedInvoice = new NetSuiteInvoice();
+            NetSuiteSQLQuery sqlQuery = new NetSuiteSQLQuery();
+
+            //Check if the fee already exists in NetSuite by the customer ID
+            if (matchedInvoice?.ID == null)
+            {
+                sqlQuery = new NetSuiteSQLQuery
+                {
+                    Q = @$"SELECT T.* FROM Transaction T 
+                    WHERE 
+                        T.Entity = {netSuiteInvoice.Entity?.ID} 
+                        AND T.AbbrevType = 'INV' 
+                        AND T.TranDate >= '{netSuiteInvoice?.AcademicYearStartDate?.Format("dd/MM/yyyy")}' 
+                        AND T.TranDate <= '{netSuiteInvoice?.AcademicYearEndDate?.Format("dd/MM/yyyy")}'
+                        AND T.ForeignTotal = {netSuiteInvoice?.Total}
+                        AND T.Memo = '{netSuiteInvoice?.Memo}'"
+                };
+
+                matchedInvoice = await FindNetSuiteSQLInvoice(sqlQuery, InvoiceMatchType.ByCustomerIDAndAmount);
+            }
+
+            if (matchedInvoice?.ID == null)
+            {
+                //If no match found then create a new invoice
+                matchedInvoice = new NetSuiteInvoice();
+                matchedInvoice.InvoiceMatchType = InvoiceMatchType.NotFound;
+            }
+
+            return matchedInvoice ?? new NetSuiteInvoice();
+        }
+
+        public async Task<NetSuiteInvoice> GetNetSuiteInvoicebyEmail(NetSuiteInvoice netSuiteInvoice)
         {
             NetSuiteInvoice? matchedInvoice = new NetSuiteInvoice();
             IList<NetSuiteSearchParameter> searchParameters = new List<NetSuiteSearchParameter>();
             NetSuiteSearchParameter param = new NetSuiteSearchParameter();
-            NetSuiteSearchResult? searchResults = new NetSuiteSearchResult();
 
             //Check if the fee already exists in NetSuite by the course code
             if (matchedInvoice?.ID == null)
@@ -1265,7 +1352,7 @@ namespace NetSuiteIntegration.Services
                 param = AddNetSuiteSearchParameter(null, "memo", Operator.IS, netSuiteInvoice?.Memo);
                 searchParameters.Add(param);
 
-                matchedInvoice = await FindNetSuiteInvoice(searchParameters, InvoiceMatchType.ByCourseCode);
+                matchedInvoice = await FindNetSuiteInvoice(searchParameters, InvoiceMatchType.ByEmail);
             }
 
             if (matchedInvoice?.ID == null)
@@ -1311,6 +1398,82 @@ namespace NetSuiteIntegration.Services
             }
 
             return matchedInvoice ?? new NetSuiteInvoice();
+        }
+
+        public async Task<NetSuiteInvoice> FindNetSuiteSQLInvoice(NetSuiteSQLQuery sqlQuery, InvoiceMatchType invoiceMatchType)
+        {
+            NetSuiteSQLTransaction? searchResults = new NetSuiteSQLTransaction();
+            NetSuiteInvoice? matchedInvoice = new NetSuiteInvoice();
+
+            try
+            {
+                //Perform the search
+                if (_netsuite != null)
+                    searchResults = await _netsuite.SearchSQL<NetSuiteSQLTransaction>("transaction", sqlQuery);
+
+                if (searchResults?.Count > 0)
+                {
+                    //Get record details if it matches as should only ever be one match here
+                    if (_netsuite != null)
+                        matchedInvoice = await _netsuite.Get<NetSuiteInvoice>("invoice", int.Parse(searchResults?.Items?.FirstOrDefault()?.ID ?? "0"));
+                }
+
+                if (matchedInvoice != null)
+                {
+                    matchedInvoice.InvoiceMatchType = invoiceMatchType;
+                }
+            }
+            catch (Exception ex)
+            {
+                _log?.Error($"Error in FindNetSuiteSQLInvoice: {ex.Message}");
+                matchedInvoice = null;
+            }
+
+            return matchedInvoice ?? new NetSuiteInvoice();
+        }
+
+        public async Task<ICollection<NetSuiteInvoice>> FindNetSuiteInvoices(IList<NetSuiteSearchParameter>? searchParameters, InvoiceMatchType invoiceMatchType)
+        {
+            NetSuiteSearchResult? searchResults = new NetSuiteSearchResult();
+            ICollection<NetSuiteInvoice>? matchedInvoices = new List<NetSuiteInvoice>();
+            NetSuiteInvoice? invoice = new NetSuiteInvoice();
+
+            try
+            {
+                //Perform the search
+                if (searchParameters == null)
+                    searchParameters = new List<NetSuiteSearchParameter>();
+
+                if (_netsuite != null)
+                    searchResults = await _netsuite.Search<NetSuiteSearchResult>("invoice", searchParameters);
+
+                if (searchResults?.Count > 0)
+                {
+                    //Get record details if it matches as should only ever be one match here
+                    if (_netsuite != null && searchResults.Items != null)
+                    {
+                        foreach (NetSuiteSearchResultItem netSuiteSearchResult in searchResults.Items)
+                        {
+                            if (netSuiteSearchResult != null)
+                            {
+                                invoice = await _netsuite.Get<NetSuiteInvoice>("invoice", int.Parse(netSuiteSearchResult.ID ?? "0"));
+                                if (invoice != null)
+                                {
+                                    invoice.InvoiceMatchType = invoiceMatchType;
+                                    matchedInvoices.Add(invoice);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _log?.Error($"Error in FindNetSuiteInvoices: {ex.Message}");
+                matchedInvoices = null;
+            }
+
+            return matchedInvoices ?? new List<NetSuiteInvoice>();
         }
 
         public async Task<NetSuiteInvoice> UpdateNetSuiteInvoice(NetSuiteInvoice netSuiteInvoice, bool? readOnly)
@@ -1361,25 +1524,78 @@ namespace NetSuiteIntegration.Services
 
         public async Task<NetSuiteCreditMemo> GetNetSuiteCreditMemo(NetSuiteCreditMemo netSuiteCreditMemo)
         {
-            NetSuiteCreditMemo? matchedCreditMemo = new NetSuiteCreditMemo();
+            //Check if the credit memo already exists in NetSuite by first returning all credit memos for the academic year (to avoid returning too many records)
+            //and then filtering by the customer and the amount as this is not possible in the NetSuite REST API directly as it does not support
+            //querying sub-elements
+
+            ICollection<NetSuiteCreditMemo>? allCustomerCredits = new List<NetSuiteCreditMemo>();
+            NetSuiteCreditMemo? matchedCredit = new NetSuiteCreditMemo();
             IList<NetSuiteSearchParameter> searchParameters = new List<NetSuiteSearchParameter>();
             NetSuiteSearchParameter param = new NetSuiteSearchParameter();
-            NetSuiteSearchResult? searchResults = new NetSuiteSearchResult();
 
-            //Check if the credit note already exists in NetSuite by the email address
+            searchParameters = new List<NetSuiteSearchParameter>();
+
+            param = AddNetSuiteSearchParameter(null, "tranDate", Operator.ON_OR_AFTER, netSuiteCreditMemo?.AcademicYearStartDate?.Format("dd/MM/yyyy"));
+            searchParameters.Add(param);
+            param = AddNetSuiteSearchParameter(null, "tranDate", Operator.ON_OR_BEFORE, netSuiteCreditMemo?.AcademicYearEndDate?.Format("dd/MM/yyyy"));
+            searchParameters.Add(param);
+
+            allCustomerCredits = await FindNetSuiteCreditMemos(searchParameters, CreditMemoMatchType.ByAcademicYear);
+            _log?.Information($"Found {allCustomerCredits?.Count} credits between {netSuiteCreditMemo?.AcademicYearStartDate?.Format("dd/MM/yyyy")} and {netSuiteCreditMemo?.AcademicYearEndDate?.Format("dd/MM/yyyy")}");
+
+            if (allCustomerCredits != null)
+            {
+                foreach (NetSuiteCreditMemo? credit in allCustomerCredits)
+                {
+                    if (credit != null && credit.Entity != null)
+                    {
+                        //Check if the credit memo matches the customer ID and total amount
+                        if (credit.Entity.ID == netSuiteCreditMemo?.Entity?.ID
+                            && credit.Total == netSuiteCreditMemo?.Total)
+                        {
+                            matchedCredit = credit;
+                            matchedCredit.CreditMemoMatchType = CreditMemoMatchType.ByCustomerIDAndAmount;
+                            break; //Exit loop as match is found
+                        }
+                    }
+                }
+            }
+
+            if (matchedCredit?.ID == null)
+            {
+                //If no match found then create a new credit memo
+                matchedCredit = new NetSuiteCreditMemo();
+                matchedCredit.CreditMemoMatchType = CreditMemoMatchType.NotFound;
+            }
+
+            return matchedCredit ?? new NetSuiteCreditMemo();
+        }
+
+        public async Task<NetSuiteCreditMemo> GetNetSuiteSQLCreditMemo(NetSuiteCreditMemo netSuiteCreditMemo)
+        {
+            NetSuiteCreditMemo? matchedCreditMemo = new NetSuiteCreditMemo();
+            NetSuiteSQLQuery sqlQuery = new NetSuiteSQLQuery();
+
+            //Check if the credit memo already exists in NetSuite by the customer ID
             if (matchedCreditMemo?.ID == null)
             {
-                searchParameters = new List<NetSuiteSearchParameter>();
+                sqlQuery = new NetSuiteSQLQuery
+                {
+                    Q = @$"SELECT T.* FROM Transaction T 
+                    WHERE 
+                        T.Entity = {netSuiteCreditMemo.Entity?.ID} 
+                        AND T.AbbrevType = 'CREDMEM' 
+                        AND T.TranDate >= '{netSuiteCreditMemo?.AcademicYearStartDate?.Format("dd/MM/yyyy")}' 
+                        AND T.TranDate <= '{netSuiteCreditMemo?.AcademicYearEndDate?.Format("dd/MM/yyyy")}'
+                        AND T.ForeignTotal = {netSuiteCreditMemo?.Total}"
+                };
 
-                param = AddNetSuiteSearchParameter(null, "email", Operator.IS, netSuiteCreditMemo?.Email);
-                searchParameters.Add(param);
-
-                matchedCreditMemo = await FindNetSuiteCreditMemo(searchParameters, CreditMemoMatchType.ByCourseCode);
+                matchedCreditMemo = await FindNetSuiteSQLCreditMemo(sqlQuery, CreditMemoMatchType.ByCustomerIDAndAmount);
             }
 
             if (matchedCreditMemo?.ID == null)
             {
-                //If no match found then create a new invoice
+                //If no match found then create a new credit memo
                 matchedCreditMemo = new NetSuiteCreditMemo();
                 matchedCreditMemo.CreditMemoMatchType = CreditMemoMatchType.NotFound;
             }
@@ -1420,6 +1636,82 @@ namespace NetSuiteIntegration.Services
             }
 
             return matchedCreditMemo ?? new NetSuiteCreditMemo();
+        }
+
+        public async Task<NetSuiteCreditMemo> FindNetSuiteSQLCreditMemo(NetSuiteSQLQuery sqlQuery, CreditMemoMatchType creditMemoMatchType)
+        {
+            NetSuiteSQLTransaction? searchResults = new NetSuiteSQLTransaction();
+            NetSuiteCreditMemo? matchedCreditMemo = new NetSuiteCreditMemo();
+
+            try
+            {
+                //Perform the search
+                if (_netsuite != null)
+                    searchResults = await _netsuite.SearchSQL<NetSuiteSQLTransaction>("transaction", sqlQuery);
+
+                if (searchResults?.Count > 0)
+                {
+                    //Get record details if it matches as should only ever be one match here
+                    if (_netsuite != null)
+                        matchedCreditMemo = await _netsuite.Get<NetSuiteCreditMemo>("creditMemo", int.Parse(searchResults?.Items?.FirstOrDefault()?.ID ?? "0"));
+                }
+
+                if (matchedCreditMemo != null)
+                {
+                    matchedCreditMemo.CreditMemoMatchType = creditMemoMatchType;
+                }
+            }
+            catch (Exception ex)
+            {
+                _log?.Error($"Error in FindNetSuiteSQLCreditMemo: {ex.Message}");
+                matchedCreditMemo = null;
+            }
+
+            return matchedCreditMemo ?? new NetSuiteCreditMemo();
+        }
+
+        public async Task<ICollection<NetSuiteCreditMemo>> FindNetSuiteCreditMemos(IList<NetSuiteSearchParameter>? searchParameters, CreditMemoMatchType creditMemoMatchType)
+        {
+            NetSuiteSearchResult? searchResults = new NetSuiteSearchResult();
+            ICollection<NetSuiteCreditMemo>? matchedCustomerCreditNotes = new List<NetSuiteCreditMemo>();
+            NetSuiteCreditMemo? credit = new NetSuiteCreditMemo();
+
+            try
+            {
+                //Perform the search
+                if (searchParameters == null)
+                    searchParameters = new List<NetSuiteSearchParameter>();
+
+                if (_netsuite != null)
+                    searchResults = await _netsuite.Search<NetSuiteSearchResult>("creditMemo", searchParameters);
+
+                if (searchResults?.Count > 0)
+                {
+                    //Get record details if it matches as should only ever be one match here
+                    if (_netsuite != null && searchResults.Items != null)
+                    {
+                        foreach (NetSuiteSearchResultItem netSuiteSearchResult in searchResults.Items)
+                        {
+                            if (netSuiteSearchResult != null)
+                            {
+                                credit = await _netsuite.Get<NetSuiteCreditMemo>("creditMemo", int.Parse(netSuiteSearchResult.ID ?? "0"));
+                                if (credit != null)
+                                {
+                                    credit.CreditMemoMatchType = creditMemoMatchType;
+                                    matchedCustomerCreditNotes.Add(credit);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _log?.Error($"Error in FindNetSuiteCreditMemos: {ex.Message}");
+                matchedCustomerCreditNotes = null;
+            }
+
+            return matchedCustomerCreditNotes ?? new List<NetSuiteCreditMemo>();
         }
 
         public async Task<NetSuiteCreditMemo> UpdateNetSuiteCreditMemo(NetSuiteCreditMemo netSuiteCreditMemo, bool? readOnly)
@@ -1471,14 +1763,13 @@ namespace NetSuiteIntegration.Services
         public async Task<NetSuiteCustomerRefund> GetNetSuiteCustomerRefund(NetSuiteCustomerRefund netSuiteCustomerRefund)
         {
             //Check if the refund already exists in NetSuite by first returning all refunds for the academic year (to avoid returning too many records)
-            //and then filtering by the student and the amount as this does not appear possible in the NetSuite REST API directly as it does not support
+            //and then filtering by the customer and the amount as this is not possible in the NetSuite REST API directly as it does not support
             //querying sub-elements
 
             ICollection<NetSuiteCustomerRefund>? allCustomerRefunds = new List<NetSuiteCustomerRefund>();
             NetSuiteCustomerRefund? matchedCustomerRefund = new NetSuiteCustomerRefund();
             IList<NetSuiteSearchParameter> searchParameters = new List<NetSuiteSearchParameter>();
             NetSuiteSearchParameter param = new NetSuiteSearchParameter();
-            NetSuiteSearchResult? searchResults = new NetSuiteSearchResult();
 
             searchParameters = new List<NetSuiteSearchParameter>();
 
@@ -1488,6 +1779,7 @@ namespace NetSuiteIntegration.Services
             searchParameters.Add(param);
 
             allCustomerRefunds = await FindNetSuiteCustomerRefunds(searchParameters, CustomerRefundMatchType.ByAcademicYear);
+            _log?.Information($"Found {allCustomerRefunds?.Count} refunds between {netSuiteCustomerRefund?.AcademicYearStartDate?.Format("dd/MM/yyyy")} and {netSuiteCustomerRefund?.AcademicYearEndDate?.Format("dd/MM/yyyy")}");
 
             if (allCustomerRefunds != null)
             {
@@ -1505,6 +1797,38 @@ namespace NetSuiteIntegration.Services
                         }
                     }
                 }
+            }
+
+            if (matchedCustomerRefund?.ID == null)
+            {
+                //If no match found then create a new customer refund
+                matchedCustomerRefund = new NetSuiteCustomerRefund();
+                matchedCustomerRefund.CustomerRefundMatchType = CustomerRefundMatchType.NotFound;
+            }
+
+            return matchedCustomerRefund ?? new NetSuiteCustomerRefund();
+        }
+
+        public async Task<NetSuiteCustomerRefund> GetNetSuiteSQLCustomerRefund(NetSuiteCustomerRefund netSuiteCustomerRefund)
+        {
+            NetSuiteCustomerRefund? matchedCustomerRefund = new NetSuiteCustomerRefund();
+            NetSuiteSQLQuery sqlQuery = new NetSuiteSQLQuery();
+
+            //Check if the customer refund already exists in NetSuite by the customer ID
+            if (matchedCustomerRefund?.ID == null)
+            {
+                sqlQuery = new NetSuiteSQLQuery
+                {
+                    Q = @$"SELECT T.* FROM Transaction T 
+                    WHERE 
+                        T.Entity = {netSuiteCustomerRefund.Customer?.ID} 
+                        AND T.AbbrevType = 'RFND' 
+                        AND T.TranDate >= '{netSuiteCustomerRefund?.AcademicYearStartDate?.Format("dd/MM/yyyy")}' 
+                        AND T.TranDate <= '{netSuiteCustomerRefund?.AcademicYearEndDate?.Format("dd/MM/yyyy")}'
+                        AND T.ForeignTotal = {netSuiteCustomerRefund?.Total}"
+                };
+
+                matchedCustomerRefund = await FindNetSuiteSQLCustomerRefund(sqlQuery, CustomerRefundMatchType.ByCustomerIDAndAmount);
             }
 
             if (matchedCustomerRefund?.ID == null)
@@ -1546,6 +1870,38 @@ namespace NetSuiteIntegration.Services
             catch (Exception ex)
             {
                 _log?.Error($"Error in FindNetSuiteCustomerRefund: {ex.Message}");
+                matchedCustomerRefund = null;
+            }
+
+            return matchedCustomerRefund ?? new NetSuiteCustomerRefund();
+        }
+
+        public async Task<NetSuiteCustomerRefund> FindNetSuiteSQLCustomerRefund(NetSuiteSQLQuery sqlQuery, CustomerRefundMatchType customerRefundMatchType)
+        {
+            NetSuiteSQLTransaction? searchResults = new NetSuiteSQLTransaction();
+            NetSuiteCustomerRefund? matchedCustomerRefund = new NetSuiteCustomerRefund();
+
+            try
+            {
+                //Perform the search
+                if (_netsuite != null)
+                    searchResults = await _netsuite.SearchSQL<NetSuiteSQLTransaction>("transaction", sqlQuery);
+
+                if (searchResults?.Count > 0)
+                {
+                    //Get record details if it matches as should only ever be one match here
+                    if (_netsuite != null)
+                        matchedCustomerRefund = await _netsuite.Get<NetSuiteCustomerRefund>("customerRefund", int.Parse(searchResults?.Items?.FirstOrDefault()?.ID ?? "0"));
+                }
+
+                if (matchedCustomerRefund != null)
+                {
+                    matchedCustomerRefund.CustomerRefundMatchType = customerRefundMatchType;
+                }
+            }
+            catch (Exception ex)
+            {
+                _log?.Error($"Error in FindNetSuiteSQLCreditMemo: {ex.Message}");
                 matchedCustomerRefund = null;
             }
 

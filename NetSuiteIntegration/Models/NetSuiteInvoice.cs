@@ -136,7 +136,9 @@ namespace NetSuiteIntegration.Models
 
     public enum InvoiceMatchType
     {
-        ByCourseCode,
+        ByAcademicYear,
+        ByCustomerIDAndAmount,
+        ByEmail,
         NotFound
     }
 }
