@@ -484,11 +484,20 @@ namespace NetSuiteIntegration.Services
                             else
                                 _log?.Information($"Fee Not Found in NetSuite");
 
+                            int? numUniteInvoiceLines = matchedInvoice?.Items?.Where(i => i.Amount != null).ToList().Count ?? 0;
+
                             if (matchedInvoice?.ID != null)
                             {
                                 //Update the ID of the record that came from UNIT-e so it can be used to update the record in NetSuite
                                 if (invoice != null)
                                     invoice.ID = matchedInvoice?.ID;
+
+                                //Get invoice items
+                                if (matchedInvoice != null && matchedInvoice?.ID != null)
+                                    matchedInvoice.Items = await GetNetSuiteAddresses(matchedInvoice);
+
+                                _log?.Information($"\nFound {numUniteInvoiceLines} invoice lines for customer in UNIT-e");
+                                _log?.Information($"Found {matchedInvoice?.Items?.Count ?? 0} addresses for NetSuite Invoice Item ID: {matchedInvoice?.ID}");
                             }
                             #endregion
 

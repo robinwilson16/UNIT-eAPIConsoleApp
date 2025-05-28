@@ -127,6 +127,8 @@ namespace NetSuiteIntegration.Models
         [JsonIgnore]
         public RecordActionType? RecordActionType { get; set; }
         [JsonIgnore]
+        public ICollection<NetSuiteInvoiceItemDetail>? Items { get; set; }
+        [JsonIgnore]
         [Column(TypeName = "decimal(16,0)")]
         public decimal? UNITeStudentID { get; set; }
         [JsonIgnore]

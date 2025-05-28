@@ -391,5 +391,8 @@ namespace NetSuiteIntegration.Models
         //Store NetSuite Customer ID once found for linking
         [JsonIgnore]
         public string? NetSuiteCustomerID { get; set; }
+        //Link to NetSuite Non-Inventory Sale Item for this fee
+        [JsonIgnore]
+        public string? NetSuiteNonInventorySaleItemID { get; set; }
     }
 }

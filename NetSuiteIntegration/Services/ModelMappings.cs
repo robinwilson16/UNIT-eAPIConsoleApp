@@ -377,6 +377,119 @@ namespace NetSuiteIntegration.Services
                 TranDate = inv.StartDateEnrol?.Format("yyyy-MM-dd"),
                 AcademicYearStartDate = inv.AcademicYearStartDate,
                 AcademicYearEndDate = inv.AcademicYearEndDate,
+                Items = new List<NetSuiteInvoiceItemDetail>
+                {
+                    new NetSuiteInvoiceItemDetail
+                    {
+                        Amount = decimal.ToDouble(inv.FeeGross ?? 0),
+                        Class = new NetSuiteInvoiceItemDetailClass
+                        {
+                            RefName = $"{inv.SubjectName}: {inv.CampusName}"
+                        },
+                        CostEstimate = 0,
+                        CostEstimateRate = 0,
+                        CostEstimateType = new NetSuiteInvoiceItemDetailCostEstimateType
+                        {
+                            ID = "ITEMDEFINED",
+                            RefName = "ITEMDEFINED"
+                        },
+                        Custcol1 = inv.StartDateEnrol?.Format("yyyy-MM-dd"),
+                        Custcol2 = inv.ExpectedEndDateEnrol?.Format("yyyy-MM-dd"),
+                        Custcol2663IsPerson = false,
+                        Custcol5892EUTriangulation = false,
+                        CustcolStatisticalValueBaseCurr = 0,
+                        Department = new NetSuiteInvoiceItemDetailDepartment
+                        {
+                            ID = "26",
+                            RefName = "Income : Student Income"
+                        },
+                        Description = inv.CourseCode,
+                        Item = new NetSuiteInvoiceItemDetailItem
+                        {
+                            ID = inv.NetSuiteNonInventorySaleItemID //Ensure NetSuite Course ID has been assigned to the UNIT-e Instance
+                        },
+                        ItemSubtype = new NetSuiteInvoiceItemDetailItemSubtype
+                        {
+                            ID = "Sale",
+                            RefName = "Sale"
+                        },
+                        ItemType = new NetSuiteInvoiceItemDetailItemType
+                        {
+                            ID = "NonInvtPart",
+                            RefName = "NonInvtPart"
+                        },
+                        Line = 1,
+                        Location = new NetSuiteInvoiceItemDetailLocation
+                        {
+                            RefName = inv.CampusName
+                        },
+                        Marginal = false,
+                        Price = new NetSuiteInvoiceItemDetailPrice
+                        {
+                            ID = "-1",
+                            RefName = ""
+                        },
+                        PrintItems = false,
+                        Quantity = 1.0,
+                        QuantityOnHand = 0.0,
+                        Rate = decimal.ToDouble(inv.FeeGross ?? 0)
+                    },
+                    inv.FeeNet > 0 ? new NetSuiteInvoiceItemDetail
+                    {
+                        Amount = decimal.ToDouble(inv.FeeNet ?? 0),
+                        Class = new NetSuiteInvoiceItemDetailClass
+                        {
+                            RefName = $"{inv.SubjectName}: {inv.CampusName}"
+                        },
+                        CostEstimate = 0,
+                        CostEstimateRate = 0,
+                        CostEstimateType = new NetSuiteInvoiceItemDetailCostEstimateType
+                        {
+                            ID = "ITEMDEFINED",
+                            RefName = "ITEMDEFINED"
+                        },
+                        Custcol1 = inv.StartDateEnrol?.Format("yyyy-MM-dd"),
+                        Custcol2 = inv.ExpectedEndDateEnrol?.Format("yyyy-MM-dd"),
+                        Custcol2663IsPerson = false,
+                        Custcol5892EUTriangulation = false,
+                        CustcolStatisticalValueBaseCurr = 0,
+                        Department = new NetSuiteInvoiceItemDetailDepartment
+                        {
+                            ID = "26",
+                            RefName = "Income : Student Income"
+                        },
+                        Description = "CREDIT_TUT_GBP",
+                        Item = new NetSuiteInvoiceItemDetailItem
+                        {
+                            ID = "5457" //50220 Discounts
+                        },
+                        ItemSubtype = new NetSuiteInvoiceItemDetailItemSubtype
+                        {
+                            ID = "Sale",
+                            RefName = "Sale"
+                        },
+                        ItemType = new NetSuiteInvoiceItemDetailItemType
+                        {
+                            ID = "NonInvtPart",
+                            RefName = "NonInvtPart"
+                        },
+                        Line = 2,
+                        Location = new NetSuiteInvoiceItemDetailLocation
+                        {
+                            RefName = inv.CampusName
+                        },
+                        Marginal = false,
+                        Price = new NetSuiteInvoiceItemDetailPrice
+                        {
+                            ID = "-1",
+                            RefName = ""
+                        },
+                        PrintItems = false,
+                        Quantity = 1.0,
+                        QuantityOnHand = 0.0,
+                        Rate = decimal.ToDouble(inv.FeeNet ?? 0)
+                    } : new NetSuiteInvoiceItemDetail()
+                },
                 UNITeStudentID = inv.StudentID,
                 UNITeEnrolmentID = inv.EnrolmentID
             }).ToList<NetSuiteInvoice>();
