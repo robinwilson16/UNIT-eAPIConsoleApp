@@ -418,7 +418,7 @@ namespace NetSuiteIntegration.Services
                             ID = "NonInvtPart",
                             RefName = "NonInvtPart"
                         },
-                        Line = 1,
+                        //Line = 1,
                         Location = new NetSuiteInvoiceItemDetailLocation
                         {
                             RefName = inv.CampusName
@@ -432,7 +432,8 @@ namespace NetSuiteIntegration.Services
                         PrintItems = false,
                         Quantity = 1.0,
                         QuantityOnHand = 0.0,
-                        Rate = decimal.ToDouble(inv.FeeGross ?? 0)
+                        Rate = decimal.ToDouble(inv.FeeGross ?? 0),
+                        IsMainInvoiceLine = true
                     },
                     inv.FeeNet > 0 ? new NetSuiteInvoiceItemDetail
                     {
@@ -473,7 +474,7 @@ namespace NetSuiteIntegration.Services
                             ID = "NonInvtPart",
                             RefName = "NonInvtPart"
                         },
-                        Line = 2,
+                        //Line = 2,
                         Location = new NetSuiteInvoiceItemDetailLocation
                         {
                             RefName = inv.CampusName
@@ -487,7 +488,8 @@ namespace NetSuiteIntegration.Services
                         PrintItems = false,
                         Quantity = 1.0,
                         QuantityOnHand = 0.0,
-                        Rate = decimal.ToDouble(inv.FeeNet ?? 0)
+                        Rate = decimal.ToDouble(inv.FeeNet ?? 0),
+                        IsMainInvoiceLine = false
                     } : new NetSuiteInvoiceItemDetail()
                 },
                 UNITeStudentID = inv.StudentID,

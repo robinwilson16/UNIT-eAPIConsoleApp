@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using UNITe.Business.Helper;
+using static NetSuiteIntegration.Models.SharedEnum;
 
 namespace NetSuiteIntegration.Models
 {
@@ -40,5 +41,11 @@ namespace NetSuiteIntegration.Models
         public double? Quantity { get; set; }
         public double? QuantityOnHand { get; set; }
         public double? Rate { get; set; }
+
+        //Extra Fields
+        [JsonIgnore]
+        public RecordActionType? RecordActionType { get; set; }
+        [JsonIgnore]
+        public bool? IsMainInvoiceLine { get; set; }
     }
 }

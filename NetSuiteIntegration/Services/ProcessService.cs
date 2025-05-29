@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using System.Net;
 using Microsoft.EntityFrameworkCore;
 using NetSuiteIntegration.Interfaces;
 using NetSuiteIntegration.Models;
@@ -472,7 +473,7 @@ namespace NetSuiteIntegration.Services
                         foreach (NetSuiteInvoice? invoice in uniteNetSuiteInvoices!)
                         {
                             rowNumber++;
-                            _log?.Information($"\nRecord {rowNumber} of {uniteNetSuiteInvoices.Count}: Searching for invoice to Customer ID {invoice?.Entity?.RefName} for {invoice?.Total?.Format("C2")} in NetSuite");
+                            _log?.Information($"\nRecord {rowNumber} of {uniteNetSuiteInvoices.Count}: Searching for invoice to Customer ID {invoice?.Entity?.ID} for {invoice?.Total?.Format("C2")} in NetSuite");
 
                             #region Find Invoice
                             //Find this fee (invoice) in NetSuite
@@ -480,11 +481,11 @@ namespace NetSuiteIntegration.Services
                             matchedInvoice = await GetNetSuiteSQLInvoiceByCustomer(invoice ?? new NetSuiteInvoice());
 
                             if (matchedInvoice?.InvoiceMatchType == InvoiceMatchType.ByCustomerIDAndAmount)
-                                _log?.Information($"Fee Found in NetSuite by Customer ID and Total Amount with NetSuite Invoice Item ID: {matchedInvoice?.ID}");
+                                _log?.Information($"Invoice Found in NetSuite by Customer ID and Total Amount with NetSuite Invoice Item ID: {matchedInvoice?.ID}");
                             else
-                                _log?.Information($"Fee Not Found in NetSuite");
+                                _log?.Information($"Invoice Not Found in NetSuite");
 
-                            int? numUniteInvoiceLines = matchedInvoice?.Items?.Where(i => i.Amount != null).ToList().Count ?? 0;
+                            int? numUniteInvoiceLines = invoice?.Items?.Where(i => i.Amount != null).ToList().Count ?? 0;
 
                             if (matchedInvoice?.ID != null)
                             {
@@ -497,8 +498,15 @@ namespace NetSuiteIntegration.Services
                                     matchedInvoice.Items = await GetNetSuiteInvoiceItems(matchedInvoice);
 
                                 _log?.Information($"\nFound {numUniteInvoiceLines} invoice lines for customer in UNIT-e");
-                                _log?.Information($"Found {matchedInvoice?.Items?.Count ?? 0} addresses for NetSuite Invoice Item ID: {matchedInvoice?.ID}");
+                                _log?.Information($"Found {matchedInvoice?.Items?.Count ?? 0} invoice lines for NetSuite Invoice Item ID: {matchedInvoice?.ID}");
                             }
+
+                            //_log?.Information($"Main Invoice Line {invoice?.Items?.Where(i => i.IsMainInvoiceLine == true).FirstOrDefault()?.Description} for {invoice?.Items?.Where(i => i.IsMainInvoiceLine == true).FirstOrDefault()?.Amount?.Format("C2")}");
+
+                            //Check if invoice lines are up to date and flag each one for insert or update
+                            if (invoice != null)
+                                invoice.Items = CheckNetSuiteInvoiceItems(invoice, matchedInvoice);
+
                             #endregion
 
                             #region Perform Updates to NetSuite Invoice
@@ -528,6 +536,11 @@ namespace NetSuiteIntegration.Services
                                 }
                             }
                             #endregion
+
+                            //Update the addresses in NetSuite
+                            bool? invoiceLinesUpdated = false;
+                            if (invoice != null)
+                                invoiceLinesUpdated = await UpdateNetSuiteInvoiceItems(invoice, readOnly);
 
                             if (firstRecordOnly == true)
                                 break;
@@ -1584,6 +1597,117 @@ namespace NetSuiteIntegration.Services
             }
 
             return netSuiteInvoiceItems ?? new List<NetSuiteInvoiceItemDetail>();
+        }
+
+        public ICollection<NetSuiteInvoiceItemDetail> CheckNetSuiteInvoiceItems(NetSuiteInvoice netSuiteInvoice, NetSuiteInvoice? matchedInvoice)
+        {
+            int? numUniteInvoiceLines = netSuiteInvoice?.Items?.Where(i => i.Amount != null).ToList().Count ?? 0;
+
+            if (netSuiteInvoice != null && netSuiteInvoice.Items != null)
+            {
+                int? invoiceItemNum = 0;
+                foreach (NetSuiteInvoiceItemDetail? invoiceItem in netSuiteInvoice!.Items)
+                {
+                    if (invoiceItem != null && invoiceItem.Amount != null)
+                    {
+                        invoiceItemNum++;
+
+                        if (matchedInvoice != null && matchedInvoice.Items != null)
+                        {
+                            foreach (NetSuiteInvoiceItemDetail? matchedInvoiceItem in matchedInvoice!.Items)
+                            {
+                                if (matchedInvoiceItem != null)
+                                {
+                                    //_log?.Information($"UNIT-e Invoice Line {invoiceItem?.Line} - {invoiceItem?.Description} for {invoiceItem?.Amount?.Format("C2")} vs NetSuite Invoice Line {matchedInvoiceItem?.Line} - {matchedInvoiceItem?.Description} for {matchedInvoiceItem?.Amount?.Format("C2")}");
+                                    
+                                    //Check if the invoice line exists and has not already been matched to an existing record
+                                    if (invoiceItem?.Amount == matchedInvoiceItem?.Amount
+                                        && netSuiteInvoice?.Items.Any(a => a?.Line == matchedInvoiceItem?.Line) == false)
+                                    {
+                                        //If this is the main invoice line and the course ID is the same then this is a match
+                                        if (invoiceItem?.IsMainInvoiceLine == true
+                                            && invoiceItem?.Item?.ID == matchedInvoiceItem?.Item?.ID)
+                                        {
+                                            //Main invoice line found with same amount so no action needed
+                                            invoiceItem!.RecordActionType = RecordActionType.None;
+                                        }
+                                        else
+                                        {
+                                            //Additional invoice line found (as amount matches) so also no action required
+                                            invoiceItem!.RecordActionType = RecordActionType.None;
+                                        }
+
+                                        //Update the ID of the record
+                                        invoiceItem!.Line = matchedInvoiceItem?.Line;
+                                    }
+                                    else
+                                    {
+                                        invoiceItem!.RecordActionType = RecordActionType.Insert;
+                                        _log?.Information($"Invoice Line {invoiceItemNum} of {numUniteInvoiceLines}: {invoiceItem.Description} for {invoiceItem?.Amount.Format("C2")} not found in NetSuite so need to add");
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            //This would be for new customers
+                            invoiceItem!.RecordActionType = RecordActionType.Insert;
+                            _log?.Information($"Invoice Line {invoiceItemNum} of {numUniteInvoiceLines}: {invoiceItem.Description} for {invoiceItem?.Amount.Format("C2")} not found in NetSuite so need to add");
+                        }
+
+                    }
+                }
+            }
+
+            return netSuiteInvoice?.Items ?? new List<NetSuiteInvoiceItemDetail>();
+        }
+
+        public async Task<bool?> UpdateNetSuiteInvoiceItems(NetSuiteInvoice netSuiteInvoice, bool? readOnly)
+        {
+            bool? isOK = true;
+            if (readOnly != true)
+            {
+                if (netSuiteInvoice?.Items != null && _netsuite != null)
+                {
+                    try
+                    {
+                        foreach (NetSuiteInvoiceItemDetail? invoiceItem in netSuiteInvoice.Items)
+                        {
+                            if (invoiceItem != null)
+                            {
+                                //If the invoice item is not null and has an ID then update it
+                                if (invoiceItem.Line != null && invoiceItem.RecordActionType == RecordActionType.Update)
+                                {
+                                    NetSuiteInvoiceItemDetail? updatedInvoiceItem = await _netsuite.Update<NetSuiteInvoiceItemDetail>($"invoice/{netSuiteInvoice?.ID}/item", invoiceItem.Line ?? 0, invoiceItem);
+                                    _log?.Information($"Updated Invoice Line {updatedInvoiceItem?.Line} for Invoice {netSuiteInvoice?.ID}");
+                                }
+                                else if (invoiceItem.RecordActionType == RecordActionType.Insert)
+                                {
+                                    NetSuiteInvoiceItemDetail? insertedInvoiceItem = await _netsuite.Add<NetSuiteInvoiceItemDetail>($"invoice/{netSuiteInvoice?.ID}/item", invoiceItem);
+                                    _log?.Information($"Inserted Invoice Line {insertedInvoiceItem?.Line} for Invoice {netSuiteInvoice?.ID}");
+                                }
+                                else if (invoiceItem.RecordActionType == RecordActionType.None)
+                                {
+                                    _log?.Information($"No Changes Made to Invoice Line {invoiceItem?.Line} for Invoice {netSuiteInvoice?.ID}");
+                                }
+                                else
+                                {
+                                    _log?.Information($"Error determining action for Invoice Line {invoiceItem?.Line} for Invoice {netSuiteInvoice?.ID}");
+                                    isOK = false;
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _log?.Error($"Error updating Invoice Lines: {ex.Message}");
+                        isOK = false;
+                    }
+
+                }
+            }
+
+            return isOK;
         }
 
         public async Task<NetSuiteCreditMemo> GetNetSuiteCreditMemo(NetSuiteCreditMemo netSuiteCreditMemo)
