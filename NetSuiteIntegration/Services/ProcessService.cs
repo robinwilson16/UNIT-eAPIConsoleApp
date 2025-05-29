@@ -494,7 +494,7 @@ namespace NetSuiteIntegration.Services
 
                                 //Get invoice items
                                 if (matchedInvoice != null && matchedInvoice?.ID != null)
-                                    matchedInvoice.Items = await GetNetSuiteAddresses(matchedInvoice);
+                                    matchedInvoice.Items = await GetNetSuiteInvoiceItems(matchedInvoice);
 
                                 _log?.Information($"\nFound {numUniteInvoiceLines} invoice lines for customer in UNIT-e");
                                 _log?.Information($"Found {matchedInvoice?.Items?.Count ?? 0} addresses for NetSuite Invoice Item ID: {matchedInvoice?.ID}");
@@ -975,10 +975,10 @@ namespace NetSuiteIntegration.Services
             }
         }
 
-        public async Task<IList<NetSuiteAddressBook>> GetNetSuiteAddresses(NetSuiteCustomer netSuiteCustomer)
+        public async Task<ICollection<NetSuiteAddressBook>> GetNetSuiteAddresses(NetSuiteCustomer netSuiteCustomer)
         {
             NetSuiteSearchResult? netSuiteSearchResult = new NetSuiteSearchResult();
-            IList<NetSuiteAddressBook>? netSuiteAddressBookEntries = new List<NetSuiteAddressBook>();
+            ICollection<NetSuiteAddressBook>? netSuiteAddressBookEntries = new List<NetSuiteAddressBook>();
 
             if (netSuiteCustomer?.ID != null)
             {
@@ -1535,6 +1535,55 @@ namespace NetSuiteIntegration.Services
                 netSuiteInvoice.RecordActionType = RecordActionType.None;
                 return netSuiteInvoice ?? new NetSuiteInvoice();
             }
+        }
+
+        public async Task<ICollection<NetSuiteInvoiceItemDetail>> GetNetSuiteInvoiceItems(NetSuiteInvoice netSuiteInvoice)
+        {
+            NetSuiteSearchResult? netSuiteSearchResult = new NetSuiteSearchResult();
+            ICollection<NetSuiteInvoiceItemDetail>? netSuiteInvoiceItems = new List<NetSuiteInvoiceItemDetail>();
+
+            if (netSuiteInvoice?.ID != null)
+            {
+                //Get the invoice items for this invoice
+                if (_netsuite != null)
+                    netSuiteSearchResult = await _netsuite.GetAll<NetSuiteSearchResult>($"invoice/{netSuiteInvoice?.ID}/item");
+                //_log?.Information($"Found {netSuiteSearchResult?.TotalResults} Invoice Items for Invoice: {netSuiteInvoice?.ID} in NetSuite");
+            }
+            else
+            {
+                //_log?.Information($"No Invoice Items Found for Invoice ID: {netSuiteInvoice?.ID}");
+            }
+
+            if (netSuiteSearchResult != null && netSuiteSearchResult?.Items != null)
+            {
+                try
+                {
+                    foreach (NetSuiteSearchResultItem? invoiceItem in netSuiteSearchResult.Items)
+                    {
+                        if (invoiceItem != null)
+                        {
+                            NetSuiteInvoiceItemDetail? netSuiteInvoiceItem = new NetSuiteInvoiceItemDetail();
+
+                            if (_netsuite != null)
+                            {
+                                netSuiteInvoiceItem = await _netsuite.Get<NetSuiteInvoiceItemDetail>($"invoice/{netSuiteInvoice?.ID}/item", invoiceItem?.IDFromIDAndLink ?? 0);
+                            }
+
+                            if (netSuiteInvoiceItem != null)
+                            {
+                                netSuiteInvoiceItems.Add(netSuiteInvoiceItem);
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _log?.Error($"Error in GetNetSuiteInvoiceItems: {ex.Message}");
+                    netSuiteInvoiceItems = null;
+                }
+            }
+
+            return netSuiteInvoiceItems ?? new List<NetSuiteInvoiceItemDetail>();
         }
 
         public async Task<NetSuiteCreditMemo> GetNetSuiteCreditMemo(NetSuiteCreditMemo netSuiteCreditMemo)
