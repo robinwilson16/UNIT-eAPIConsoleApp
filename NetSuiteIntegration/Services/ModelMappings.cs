@@ -172,8 +172,8 @@ namespace NetSuiteIntegration.Services
                     RefName = crs.CampusName
                 },
                 CreatedDate = DateTime.Now,
-                CustItem1 = crs.StartDate?.Format("yyyy-MM-dd"),
-                CustItem2 = crs.EndDate?.Format("yyyy-MM-dd"),
+                CustItem1 = crs.StartDateCourse?.Format("yyyy-MM-dd"),
+                CustItem2 = crs.EndDateCourse?.Format("yyyy-MM-dd"),
                 CustItemIsPOItem = false,
                 CustomForm = new NetSuiteNonInventorySaleItemCustomForm
                 {
@@ -435,9 +435,9 @@ namespace NetSuiteIntegration.Services
                         Rate = decimal.ToDouble(inv.FeeGross ?? 0),
                         IsMainInvoiceLine = true
                     },
-                    inv.FeeNet > 0 ? new NetSuiteInvoiceItemDetail
+                    inv.FeeDiscount != null ? new NetSuiteInvoiceItemDetail
                     {
-                        Amount = decimal.ToDouble(inv.FeeNet ?? 0),
+                        Amount = decimal.ToDouble(inv.FeeDiscount ?? 0),
                         Class = new NetSuiteInvoiceItemDetailClass
                         {
                             RefName = $"{inv.SubjectName}: {inv.CampusName}"
@@ -488,7 +488,7 @@ namespace NetSuiteIntegration.Services
                         PrintItems = false,
                         Quantity = 1.0,
                         QuantityOnHand = 0.0,
-                        Rate = decimal.ToDouble(inv.FeeNet ?? 0),
+                        Rate = decimal.ToDouble(inv.FeeDiscount ?? 0),
                         IsMainInvoiceLine = false
                     } : new NetSuiteInvoiceItemDetail()
                 },
@@ -720,7 +720,7 @@ namespace NetSuiteIntegration.Services
                     ID = "456",
                     RefName = "20709 Debtors Control Account"
                 },
-                Balance = 0 - decimal.ToDouble(re.FeeGross ?? 0),
+                Balance = decimal.ToDouble(re.FeeGross ?? 0),
                 Cleared = false,
                 ClearedDate = null,
                 CreatedDate = DateTime.Now,
@@ -779,7 +779,7 @@ namespace NetSuiteIntegration.Services
                     RefName = re.CampusName
                 },
                 ToBePrinted = false,
-                Total = 0 - decimal.ToDouble(re.FeeGross ?? 0),
+                Total = decimal.ToDouble(re.FeeGross ?? 0),
                 TranDate = re.ActualEndDateEnrol?.Format("yyyy-MM-dd"),
                 AcademicYearStartDate = re.AcademicYearStartDate,
                 AcademicYearEndDate = re.AcademicYearEndDate,

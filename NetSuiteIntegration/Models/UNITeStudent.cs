@@ -362,6 +362,12 @@ namespace NetSuiteIntegration.Models
         [Column(TypeName = "decimal(19,4)")]
         [DataType(DataType.Currency)]
         public decimal? FeeGross { get; set; }
+        [Column(TypeName = "decimal(19,4)")]
+        [DataType(DataType.Currency)]
+        public decimal? FeeOriginal { get; set; }
+        [Column(TypeName = "decimal(19,4)")]
+        [DataType(DataType.Currency)]
+        public decimal? FeeDiscount { get; set; }
 
         //Store NetSuite Customer ID once found for linking
         [JsonIgnore]

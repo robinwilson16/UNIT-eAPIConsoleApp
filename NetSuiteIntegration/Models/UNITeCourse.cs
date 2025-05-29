@@ -31,8 +31,10 @@ namespace NetSuiteIntegration.Models
         public string? SubjectName { get; set; }
         public string? LevelCode { get; set; }
         public string? LevelName { get; set; }
-        public DateTime? StartDate { get; set; }
-        public DateTime? EndDate { get; set; }
+        public DateTime? StartDateCourse { get; set; }
+        public DateTime? EndDateCourse { get; set; }
+        public DateTime? StartDateProgramme { get; set; }
+        public DateTime? EndDateProgramme { get; set; }
         [Column(TypeName = "decimal(19,4)")]
         [DataType(DataType.Currency)]
         public decimal? Fee { get; set; }

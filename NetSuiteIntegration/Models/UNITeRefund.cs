@@ -374,6 +374,9 @@ namespace NetSuiteIntegration.Models
         public DateTime? StartDateEnrol { get; set; }
         public DateTime? ExpectedEndDateEnrol { get; set; }
         public DateTime? ActualEndDateEnrol { get; set; }
+        public DateTime? StartDateProgramme { get; set; }
+        public DateTime? ExpectedEndDateProgramme { get; set; }
+        public DateTime? ActualEndDateProgramme { get; set; }
         public DateTime? StartDateCourse { get; set; }
         public DateTime? EndDateCourse { get; set; }
         public string? EnrolmentStatusCode { get; set; }
@@ -387,6 +390,12 @@ namespace NetSuiteIntegration.Models
         [Column(TypeName = "decimal(19,4)")]
         [DataType(DataType.Currency)]
         public decimal? FeeGross { get; set; }
+        [Column(TypeName = "decimal(19,4)")]
+        [DataType(DataType.Currency)]
+        public decimal? FeeOriginal { get; set; }
+        [Column(TypeName = "decimal(19,4)")]
+        [DataType(DataType.Currency)]
+        public decimal? FeeDiscount { get; set; }
 
         //Store NetSuite Customer ID once found for linking
         [JsonIgnore]
