@@ -690,7 +690,8 @@ namespace NetSuiteIntegration.Services
                             RefName = ""
                         },
                         PrintItems = false,
-                        Quantity = 1.0
+                        Quantity = 1.0,
+                        IsMainCreditMemoLine = true
                     }
                 },
                 UNITeStudentID = cre.StudentID,

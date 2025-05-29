@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using UNITe.Business.Helper;
+using static NetSuiteIntegration.Models.SharedEnum;
 
 namespace NetSuiteIntegration.Models
 {
@@ -38,5 +39,11 @@ namespace NetSuiteIntegration.Models
         public NetSuiteCreditMemoItemDetailPrice? Price { get; set; }
         public bool? PrintItems { get; set; }
         public double? Quantity { get; set; }
+
+        //Extra Fields
+        [JsonIgnore]
+        public RecordActionType? RecordActionType { get; set; }
+        [JsonIgnore]
+        public bool? IsMainCreditMemoLine { get; set; }
     }
 }

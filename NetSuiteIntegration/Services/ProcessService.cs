@@ -537,7 +537,7 @@ namespace NetSuiteIntegration.Services
                             }
                             #endregion
 
-                            //Update the addresses in NetSuite
+                            //Update the invoice lines in NetSuite
                             bool? invoiceLinesUpdated = false;
                             if (invoice != null)
                                 invoiceLinesUpdated = await UpdateNetSuiteInvoiceItems(invoice, readOnly);
@@ -638,12 +638,28 @@ namespace NetSuiteIntegration.Services
                             else
                                 _log?.Information($"Credit Note Not Found in NetSuite");
 
+                            int? numUniteCreditMemoLines = creditMemo?.Items?.Where(i => i.Amount != null).ToList().Count ?? 0;
+
                             if (matchedCreditMemo?.ID != null)
                             {
                                 //Update the ID of the record that came from UNIT-e so it can be used to update the record in NetSuite
                                 if (creditMemo != null)
                                     creditMemo.ID = matchedCreditMemo?.ID;
+
+                                //Get credit memo items
+                                if (matchedCreditMemo != null && matchedCreditMemo?.ID != null)
+                                    matchedCreditMemo.Items = await GetNetSuiteCreditMemoItems(matchedCreditMemo);
+
+                                _log?.Information($"\nFound {numUniteCreditMemoLines} credit memo lines for customer in UNIT-e");
+                                _log?.Information($"Found {matchedCreditMemo?.Items?.Count ?? 0} credit memo lines for NetSuite Credit Memo Item ID: {matchedCreditMemo?.ID}");
                             }
+
+                            //_log?.Information($"Main Credit Memo Line {creditMemo?.Items?.Where(i => i.IsMainCreditMemoLine == true).FirstOrDefault()?.Description} for {creditMemo?.Items?.Where(i => i.IsMainCreditMemoLine == true).FirstOrDefault()?.Amount?.Format("C2")}");
+
+                            //Check if credit memo lines are up to date and flag each one for insert or update
+                            if (creditMemo != null)
+                                creditMemo.Items = CheckNetSuiteCreditMemoItems(creditMemo, matchedCreditMemo);
+
                             #endregion
 
                             #region Perform Updates to NetSuite Credit Memo
@@ -673,6 +689,11 @@ namespace NetSuiteIntegration.Services
                                 }
                             }
                             #endregion
+
+                            //Update the credit memo in NetSuite
+                            bool? creditMemoLinesUpdated = false;
+                            if (creditMemo != null)
+                                creditMemoLinesUpdated = await UpdateNetSuiteCreditMemoItems(creditMemo, readOnly);
 
                             if (firstRecordOnly == true)
                                 break;
@@ -1643,7 +1664,7 @@ namespace NetSuiteIntegration.Services
                                     else
                                     {
                                         invoiceItem!.RecordActionType = RecordActionType.Insert;
-                                        _log?.Information($"Invoice Line {invoiceItemNum} of {numUniteInvoiceLines}: {invoiceItem.Description} for {invoiceItem?.Amount.Format("C2")} not found in NetSuite so need to add");
+                                        _log?.Information($"Invoice Line {invoiceItemNum} of {numUniteInvoiceLines}: {invoiceItem?.Description} for {invoiceItem?.Amount.Format("C2")} not found in NetSuite so need to add");
                                     }
                                 }
                             }
@@ -1652,7 +1673,7 @@ namespace NetSuiteIntegration.Services
                         {
                             //This would be for new customers
                             invoiceItem!.RecordActionType = RecordActionType.Insert;
-                            _log?.Information($"Invoice Line {invoiceItemNum} of {numUniteInvoiceLines}: {invoiceItem.Description} for {invoiceItem?.Amount.Format("C2")} not found in NetSuite so need to add");
+                            _log?.Information($"Invoice Line {invoiceItemNum} of {numUniteInvoiceLines}: {invoiceItem?.Description} for {invoiceItem?.Amount.Format("C2")} not found in NetSuite so need to add");
                         }
 
                     }
@@ -1952,6 +1973,165 @@ namespace NetSuiteIntegration.Services
                 netSuiteCreditMemo.RecordActionType = RecordActionType.None;
                 return netSuiteCreditMemo ?? new NetSuiteCreditMemo();
             }
+        }
+
+        public async Task<ICollection<NetSuiteCreditMemoItemDetail>> GetNetSuiteCreditMemoItems(NetSuiteCreditMemo netSuiteCreditMemo)
+        {
+            NetSuiteSearchResult? netSuiteSearchResult = new NetSuiteSearchResult();
+            ICollection<NetSuiteCreditMemoItemDetail>? netSuiteCreditMemoItems = new List<NetSuiteCreditMemoItemDetail>();
+
+            if (netSuiteCreditMemo?.ID != null)
+            {
+                //Get the credit memo items for this credit memo
+                if (_netsuite != null)
+                    netSuiteSearchResult = await _netsuite.GetAll<NetSuiteSearchResult>($"creditMemo/{netSuiteCreditMemo?.ID}/item");
+                //_log?.Information($"Found {netSuiteSearchResult?.TotalResults} Credit Memo Items for Credit Memo: {netSuiteCreditMemo?.ID} in NetSuite");
+            }
+            else
+            {
+                //_log?.Information($"No Credit Memo Items Found for Credit Memo ID: {netSuiteCreditMemo?.ID}");
+            }
+
+            if (netSuiteSearchResult != null && netSuiteSearchResult?.Items != null)
+            {
+                try
+                {
+                    foreach (NetSuiteSearchResultItem? creditNoteItem in netSuiteSearchResult.Items)
+                    {
+                        if (creditNoteItem != null)
+                        {
+                            NetSuiteCreditMemoItemDetail? netSuitecreditMemoItem = new NetSuiteCreditMemoItemDetail();
+
+                            if (_netsuite != null)
+                            {
+                                netSuitecreditMemoItem = await _netsuite.Get<NetSuiteCreditMemoItemDetail>($"creditMemo/{netSuiteCreditMemo?.ID}/item", creditNoteItem?.IDFromIDAndLink ?? 0);
+                            }
+
+                            if (netSuitecreditMemoItem != null)
+                            {
+                                netSuiteCreditMemoItems.Add(netSuitecreditMemoItem);
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _log?.Error($"Error in GetNetSuiteCreditMemoItems: {ex.Message}");
+                    netSuiteCreditMemoItems = null;
+                }
+            }
+
+            return netSuiteCreditMemoItems ?? new List<NetSuiteCreditMemoItemDetail>();
+        }
+
+        public ICollection<NetSuiteCreditMemoItemDetail> CheckNetSuiteCreditMemoItems(NetSuiteCreditMemo netSuiteCreditMemo, NetSuiteCreditMemo? matchedCreditMemo)
+        {
+            int? numUniteCreditMemoLines = netSuiteCreditMemo?.Items?.Where(i => i.Amount != null).ToList().Count ?? 0;
+
+            if (netSuiteCreditMemo != null && netSuiteCreditMemo.Items != null)
+            {
+                int? creditMemoItemNum = 0;
+                foreach (NetSuiteCreditMemoItemDetail? creditMemoItem in netSuiteCreditMemo!.Items)
+                {
+                    if (creditMemoItem != null && creditMemoItem.Amount != null)
+                    {
+                        creditMemoItemNum++;
+
+                        if (matchedCreditMemo != null && matchedCreditMemo.Items != null)
+                        {
+                            foreach (NetSuiteCreditMemoItemDetail? matchedCreditMemoItem in matchedCreditMemo!.Items)
+                            {
+                                if (matchedCreditMemoItem != null)
+                                {
+                                    //_log?.Information($"UNIT-e Credit Memo Line {creditMemoItem?.Line} - {creditMemoItem?.Description} for {creditMemoItem?.Amount?.Format("C2")} vs NetSuite Credit Memo Line {matchedCreditMemoItem?.Line} - {matchedCreditMemoItem?.Description} for {matchedCreditMemoItem?.Amount?.Format("C2")}");
+
+                                    //Check if the credit memo line exists and has not already been matched to an existing record
+                                    if (creditMemoItem?.Amount == matchedCreditMemoItem?.Amount
+                                        && netSuiteCreditMemo?.Items.Any(a => a?.Line == matchedCreditMemoItem?.Line) == false)
+                                    {
+                                        //If this is the main credit memo line then this is a match
+                                        if (creditMemoItem?.IsMainCreditMemoLine == true)
+                                        {
+                                            //Main credit memo line found with same amount so no action needed
+                                            creditMemoItem!.RecordActionType = RecordActionType.None;
+                                        }
+                                        else
+                                        {
+                                            //Additional credit memo line found (as amount matches) so also no action required
+                                            creditMemoItem!.RecordActionType = RecordActionType.None;
+                                        }
+
+                                        //Update the ID of the record
+                                        creditMemoItem!.Line = matchedCreditMemoItem?.Line;
+                                    }
+                                    else
+                                    {
+                                        creditMemoItem!.RecordActionType = RecordActionType.Insert;
+                                        _log?.Information($"Credit Memo Line {creditMemoItemNum} of {numUniteCreditMemoLines}: {creditMemoItem?.Description} for {creditMemoItem?.Amount.Format("C2")} not found in NetSuite so need to add");
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            //This would be for new customers
+                            creditMemoItem!.RecordActionType = RecordActionType.Insert;
+                            _log?.Information($"Credit Memo Line {creditMemoItemNum} of {numUniteCreditMemoLines}: {creditMemoItem?.Description} for {creditMemoItem?.Amount.Format("C2")} not found in NetSuite so need to add");
+                        }
+
+                    }
+                }
+            }
+
+            return netSuiteCreditMemo?.Items ?? new List<NetSuiteCreditMemoItemDetail>();
+        }
+
+        public async Task<bool?> UpdateNetSuiteCreditMemoItems(NetSuiteCreditMemo netSuiteCreditMemo, bool? readOnly)
+        {
+            bool? isOK = true;
+            if (readOnly != true)
+            {
+                if (netSuiteCreditMemo?.Items != null && _netsuite != null)
+                {
+                    try
+                    {
+                        foreach (NetSuiteCreditMemoItemDetail? creditMemoItem in netSuiteCreditMemo.Items)
+                        {
+                            if (creditMemoItem != null)
+                            {
+                                //If the credit memo item is not null and has an ID then update it
+                                if (creditMemoItem.Line != null && creditMemoItem.RecordActionType == RecordActionType.Update)
+                                {
+                                    NetSuiteCreditMemoItemDetail? updatedCreditMemoItem = await _netsuite.Update<NetSuiteCreditMemoItemDetail>($"creditMemo/{netSuiteCreditMemo?.ID}/item", creditMemoItem.Line ?? 0, creditMemoItem);
+                                    _log?.Information($"Updated Credit Memo Line {updatedCreditMemoItem?.Line} for Credit Memo {netSuiteCreditMemo?.ID}");
+                                }
+                                else if (creditMemoItem.RecordActionType == RecordActionType.Insert)
+                                {
+                                    NetSuiteCreditMemoItemDetail? insertedCreditMemoItem = await _netsuite.Add<NetSuiteCreditMemoItemDetail>($"creditMemo/{netSuiteCreditMemo?.ID}/item", creditMemoItem);
+                                    _log?.Information($"Inserted Credit Memo Line {insertedCreditMemoItem?.Line} for Credit Memo {netSuiteCreditMemo?.ID}");
+                                }
+                                else if (creditMemoItem.RecordActionType == RecordActionType.None)
+                                {
+                                    _log?.Information($"No Changes Made to Credit Memo Line {creditMemoItem?.Line} for Credit Memo {netSuiteCreditMemo?.ID}");
+                                }
+                                else
+                                {
+                                    _log?.Information($"Error determining action for Credit Memo Line {creditMemoItem?.Line} for Credit Memo {netSuiteCreditMemo?.ID}");
+                                    isOK = false;
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _log?.Error($"Error updating Credit Memo Lines: {ex.Message}");
+                        isOK = false;
+                    }
+
+                }
+            }
+
+            return isOK;
         }
 
         public async Task<NetSuiteCustomerRefund> GetNetSuiteCustomerRefund(NetSuiteCustomerRefund netSuiteCustomerRefund)
