@@ -513,7 +513,7 @@ namespace NetSuiteIntegration.Services
                     RefName = "20709 Debtors Control Account"
                 },
                 AmountPaid = 0,
-                AmountRemaining = 0 - decimal.ToDouble(cre.FeeGross ?? 0),
+                AmountRemaining = decimal.ToDouble(cre.FeeGross ?? 0),
                 Applied = 0,
                 AsOfDate = cre.ActualEndDateEnrol?.Format("yyyy-MM-dd"),
                 BillAddress = cre.AddressMainEncoded,
@@ -567,8 +567,8 @@ namespace NetSuiteIntegration.Services
                 CustbodySiiArticle7273 = false,
                 CustbodySiiIsThirdParty = false,
                 CustbodySiiNotReportedInTime = false,
-                CustbodyZncGbpEquivNet = 0 - decimal.ToDouble(cre.FeeGross ?? 0),
-                CustbodyZncGbpEquivTotal = 0 - decimal.ToDouble(cre.FeeGross ?? 0),
+                CustbodyZncGbpEquivNet = decimal.ToDouble(cre.FeeGross ?? 0),
+                CustbodyZncGbpEquivTotal = decimal.ToDouble(cre.FeeGross ?? 0),
                 CustbodyZncGbpEquivVat = 0,
                 CustomForm = new NetSuiteCreditMemoCustomForm
                 {
@@ -586,7 +586,7 @@ namespace NetSuiteIntegration.Services
                 {
                     ID = cre.NetSuiteCustomerID //Ensure NetSuite Customer ID has been assigned to the UNIT-e Instance
                 },
-                EstGrossProfit = 0 - decimal.ToDouble(cre.FeeGross ?? 0),
+                EstGrossProfit = decimal.ToDouble(cre.FeeGross ?? 0),
                 EstGrossProfitPercent = 100.0,
                 ExchangeRate = 1.0,
                 ExcludeFromGLNumbering = false,
@@ -624,16 +624,75 @@ namespace NetSuiteIntegration.Services
                 {
                     RefName = cre.CampusName
                 },
-                Subtotal = 0 - decimal.ToDouble(cre.FeeGross ?? 0),
+                Subtotal = decimal.ToDouble(cre.FeeGross ?? 0),
                 ToBeEmailed = false,
                 ToBeFaxed = false,
                 ToBePrinted = false,
-                Total = 0 - decimal.ToDouble(cre.FeeGross ?? 0),
+                Total = decimal.ToDouble(cre.FeeGross ?? 0),
                 TotalCostEstimate = 0,
                 TranDate = cre.ActualEndDateEnrol?.Format("yyyy-MM-dd"),
-                Unapplied = 0 - decimal.ToDouble(cre.FeeGross ?? 0),
+                Unapplied = decimal.ToDouble(cre.FeeGross ?? 0),
                 AcademicYearStartDate = cre.AcademicYearStartDate,
                 AcademicYearEndDate = cre.AcademicYearEndDate,
+                Items = new List<NetSuiteCreditMemoItemDetail>
+                {
+                    new NetSuiteCreditMemoItemDetail
+                    {
+                        Account = new NetSuiteCreditMemoItemDetailAccount
+                        {
+                            ID = "2950",
+                            RefName = "2950"
+                        },
+                        Amount = decimal.ToDouble(cre.FeeGross ?? 0),
+                        CostEstimate = 0.0,
+                        CostEstimateRate = 0.0,
+                        CostEstimateType = new NetSuiteCreditMemoItemDetailCostEstimateType
+                        {
+                            ID = "ITEMDEFINED",
+                            RefName = "ITEMDEFINED"
+                        },
+                        Custcol1 = cre.StartDateEnrol?.Format("yyyy-MM-dd"),
+                        Custcol2 = cre.ExpectedEndDateEnrol?.Format("yyyy-MM-dd"),
+                        Custcol2663IsPerson = false,
+                        Custcol5892EUTriangulation = false,
+                        CustcolStatisticalValueBaseCurr = 0,
+                        Department = new NetSuiteCreditMemoItemDetailDepartment
+                        {
+                            ID = "46",
+                            RefName = "Central : Finance"
+                        },
+                        Description = cre.CourseCode,
+                        IsDropShipment = false,
+                        Item = new NetSuiteCreditMemoItemDetailItem
+                        {
+                            ID = "5307",
+                            RefName = "Opening Balance Item - AR-For Upload"
+                        },
+                        ItemSubtype = new NetSuiteCreditMemoItemDetailItemSubtype
+                        {
+                            ID = "Sale",
+                            RefName = "Sale"
+                        },
+                        ItemType = new NetSuiteCreditMemoItemDetailItemType
+                        {
+                            ID = "NonInvtPart",
+                            RefName = "NonInvtPart"
+                        },
+                        //Line = 1,
+                        Location = new NetSuiteCreditMemoItemDetailLocation
+                        {
+                            RefName = cre.CampusName
+                        },
+                        Marginal = false,
+                        Price = new NetSuiteCreditMemoItemDetailPrice
+                        {
+                            ID = "-1",
+                            RefName = ""
+                        },
+                        PrintItems = false,
+                        Quantity = 1.0
+                    }
+                },
                 UNITeStudentID = cre.StudentID,
                 UNITeEnrolmentID = cre.EnrolmentID
             }).ToList<NetSuiteCreditMemo>();
