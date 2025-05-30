@@ -12,5 +12,6 @@ namespace NetSuiteIntegration.Models
     public class NetSuiteCustomerAddressBook
     {
         public ICollection<NetSuiteLink>? Links { get; set; }
+        public ICollection<NetSuiteAddressBook>? Items { get; set; }
     }
 }

@@ -34,13 +34,17 @@ namespace NetSuiteIntegration.Services
                     DateOfBirth = stu.DateOfBirth,
                     UCASPersonalID = stu.UCASPersonalID,
                     ULN = stu.ULN,
+                    AddressIDMain = stu.AddressIDMain,
                     AddressMain = stu.AddressMain,
                     PostCodeMain = stu.PostCodeMain,
                     AddressMainType = stu.AddressMainType,
+                    AddressIDTermTime = stu.AddressIDTermTime,
                     AddressTermTime = stu.AddressTermTime,
                     PostCodeTermTime = stu.PostCodeTermTime,
+                    AddressIDHome = stu.AddressIDHome,
                     AddressHome = stu.AddressHome,
                     PostCodeHome = stu.PostCodeHome,
+                    AddressIDInvoice = stu.AddressIDInvoice,
                     AddressInvoice = stu.AddressInvoice,
                     PostCodeInvoice = stu.PostCodeInvoice,
                     EmailAddress = stu.EmailAddress,
@@ -95,6 +99,99 @@ namespace NetSuiteIntegration.Services
             //Map UNIT-e Students to NetSuite Customers
             netSuiteCustomers = uniteStudents?.Select(cus => new NetSuiteCustomer
             {
+                AddressBook = new NetSuiteCustomerAddressBook
+                {
+                    Items = new List<NetSuiteAddressBook>()
+                    {
+                        cus.PostCodeMain != null ? new NetSuiteAddressBook {
+                            DefaultBilling = true,
+                            DefaultShipping = true,
+                            InternalID = int.Parse(Math.Round(cus.AddressIDMain ?? 0).ToString()?.Substring(cus?.AddressIDMain?.ToString()?.Length - 8 ?? 1) ?? "0"),
+                            IsResidential = true,
+                            Label = cus.AddressMainType,
+                            AddressBookAddress = new NetSuiteAddress
+                            {
+                                Addr1 = cus.Address1Main,
+                                Addr2 = cus.Address2Main,
+                                Addressee = $"{cus.Forename} {cus.Surname}",
+                                City = cus.Address3Main,
+                                Country = new NetSuiteAddressCountry
+                                {
+                                    RefName = cus.NetSuiteCountryNameMain
+                                },
+                                Override = false,
+                                Zip = cus.PostCodeMain
+                            },
+                            AddressBookAddressText = cus.AddressMainEncoded
+                        } : null,
+                        cus.PostCodeTermTime != null && cus.AddressIDTermTime != cus.AddressIDMain ? new NetSuiteAddressBook
+                        {
+                            DefaultBilling = false,
+                            DefaultShipping = false,
+                            InternalID = int.Parse(Math.Round(cus.AddressIDTermTime ?? 0).ToString()?.Substring(cus?.AddressIDTermTime?.ToString()?.Length - 8 ?? 1) ?? "0"),
+                            IsResidential = false,
+                            Label = "Term Time",
+                            AddressBookAddress = new NetSuiteAddress
+                            {
+                                Addr1 = cus.Address1TermTime,
+                                Addr2 = cus.Address2TermTime,
+                                Addressee = $"{cus.Forename} {cus.Surname}",
+                                City = cus.Address3TermTime,
+                                Country = new NetSuiteAddressCountry
+                                {
+                                    RefName = cus.NetSuiteCountryNameTermTime
+                                },
+                                Override = false,
+                                Zip = cus.PostCodeTermTime
+                            },
+                            AddressBookAddressText = cus.AddressTermTimeEncoded
+                        } : null,
+                        cus.PostCodeHome != null && cus.AddressIDHome != cus.AddressIDMain ? new NetSuiteAddressBook
+                        {
+                            DefaultBilling = false,
+                            DefaultShipping = false,
+                            InternalID = int.Parse(Math.Round(cus.AddressIDHome ?? 0).ToString()?.Substring(cus?.AddressIDHome?.ToString()?.Length - 8 ?? 1) ?? "0"),
+                            IsResidential = false,
+                            Label = "Home",
+                            AddressBookAddress = new NetSuiteAddress
+                            {
+                                Addr1 = cus.Address1Home,
+                                Addr2 = cus.Address2Home,
+                                Addressee = $"{cus.Forename} {cus.Surname}",
+                                City = cus.Address3Home,
+                                Country = new NetSuiteAddressCountry
+                                {
+                                    RefName = cus.NetSuiteCountryNameHome
+                                },
+                                Override = false,
+                                Zip = cus.PostCodeHome
+                            },
+                            AddressBookAddressText = cus.AddressHomeEncoded
+                        } : null,
+                        cus.PostCodeInvoice != null && cus.AddressIDInvoice != cus.AddressIDMain ? new NetSuiteAddressBook
+                        {
+                            DefaultBilling = false,
+                            DefaultShipping = false,
+                            InternalID = int.Parse(Math.Round(cus.AddressIDInvoice ?? 0).ToString()?.Substring(cus?.AddressIDInvoice?.ToString()?.Length - 8 ?? 1) ?? "0"),
+                            IsResidential = false,
+                            Label = "Invoice",
+                            AddressBookAddress = new NetSuiteAddress
+                            {
+                                Addr1 = cus.Address1Invoice,
+                                Addr2 = cus.Address2Invoice,
+                                Addressee = $"{cus.Forename} {cus.Surname}",
+                                City = cus.Address3Invoice,
+                                Country = new NetSuiteAddressCountry
+                                {
+                                    RefName = cus.NetSuiteCountryNameInvoice
+                                },
+                                Override = false,
+                                Zip = cus.PostCodeInvoice
+                            },
+                            AddressBookAddressText = cus.AddressInvoiceEncoded
+                        } : null
+                    }.Where(ab => ab != null).ToList()
+                },
                 AlcoholRecipientType = new NetSuiteCustomerAlcoholRecipientType
                 {
                     ID = "CONSUMER",
@@ -191,87 +288,6 @@ namespace NetSuiteIntegration.Services
                 SyncSalesTeams = false,
                 UnbilledOrders = 0,
                 Unsubscribe = false,
-                Addresses = new List<NetSuiteAddressBook>{
-                    cus.PostCodeMain != null ? new NetSuiteAddressBook {
-                        DefaultBilling = true,
-                        DefaultShipping = true,
-                        IsResidential = true,
-                        Label = cus.AddressMainType,
-                        Address = new NetSuiteAddress
-                        {
-                            Addr1 = cus.Address1Main,
-                            Addr2 = cus.Address2Main,
-                            Addressee = $"{cus.Forename} {cus.Surname}",
-                            City = cus.Address3Main,
-                            Country = new NetSuiteAddressCountry
-                            {
-                                RefName = cus.NetSuiteCountryNameMain
-                            },
-                            Override = false,
-                            Zip = cus.PostCodeMain
-                        }
-                    } : new NetSuiteAddressBook(),
-                    cus.PostCodeTermTime != null ? new NetSuiteAddressBook
-                    {
-                        DefaultBilling = false,
-                        DefaultShipping = false,
-                        IsResidential = false,
-                        Label = "Term Time",
-                        Address = new NetSuiteAddress
-                        {
-                            Addr1 = cus.Address1TermTime,
-                            Addr2 = cus.Address2TermTime,
-                            Addressee = $"{cus.Forename} {cus.Surname}",
-                            City = cus.Address3TermTime,
-                            Country = new NetSuiteAddressCountry
-                            {
-                                RefName = cus.NetSuiteCountryNameTermTime
-                            },
-                            Override = false,
-                            Zip = cus.PostCodeTermTime
-                        }
-                    } : new NetSuiteAddressBook(),
-                    cus.PostCodeHome != null ? new NetSuiteAddressBook
-                    {
-                        DefaultBilling = false,
-                        DefaultShipping = false,
-                        IsResidential = false,
-                        Label = "Home",
-                        Address = new NetSuiteAddress
-                        {
-                            Addr1 = cus.Address1Home,
-                            Addr2 = cus.Address2Home,
-                            Addressee = $"{cus.Forename} {cus.Surname}",
-                            City = cus.Address3Home,
-                            Country = new NetSuiteAddressCountry
-                            {
-                                RefName = cus.NetSuiteCountryNameHome
-                            },
-                            Override = false,
-                            Zip = cus.PostCodeHome
-                        }
-                    } : new NetSuiteAddressBook(),
-                    cus.PostCodeInvoice != null ? new NetSuiteAddressBook
-                    {
-                        DefaultBilling = false,
-                        DefaultShipping = false,
-                        IsResidential = false,
-                        Label = "Invoice",
-                        Address = new NetSuiteAddress
-                        {
-                            Addr1 = cus.Address1Invoice,
-                            Addr2 = cus.Address2Invoice,
-                            Addressee = $"{cus.Forename} {cus.Surname}",
-                            City = cus.Address3Invoice,
-                            Country = new NetSuiteAddressCountry
-                            {
-                                RefName = cus.NetSuiteCountryNameInvoice
-                            },
-                            Override = false,
-                            Zip = cus.PostCodeInvoice
-                        }
-                    } : new NetSuiteAddressBook()
-                },
                 AcademicYearStartDate = cus.AcademicYearStartDate,
                 AcademicYearEndDate = cus.AcademicYearEndDate,
                 UNITeStudentID = cus.StudentID

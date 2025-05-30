@@ -39,6 +39,8 @@ namespace NetSuiteIntegration.Models
                 return ULN == null ? null : ulnInt;
             }
         }
+        [Column(TypeName = "decimal(16,0)")]
+        public decimal? AddressIDMain { get; set; }
         public string? AddressMain { get; set; }
         public string? AddressMainEncoded
         {
@@ -117,6 +119,8 @@ namespace NetSuiteIntegration.Models
         public string? AddressMainType { get; set; }
         [MaxLength(8)]
         public string? PostCodeMain { get; set; }
+        [Column(TypeName = "decimal(16,0)")]
+        public decimal? AddressIDTermTime { get; set; }
         public string? AddressTermTime { get; set; }
         public string? AddressTermTimeEncoded
         {
@@ -194,6 +198,8 @@ namespace NetSuiteIntegration.Models
         public string? CountryNameTermTime { get; set; }
         [MaxLength(8)]
         public string? PostCodeTermTime { get; set; }
+        [Column(TypeName = "decimal(16,0)")]
+        public decimal? AddressIDHome { get; set; }
         public string? AddressHome { get; set; }
         public string? AddressHomeEncoded
         {
@@ -271,6 +277,8 @@ namespace NetSuiteIntegration.Models
         public string? CountryNameHome { get; set; }
         [MaxLength(8)]
         public string? PostCodeHome { get; set; }
+        [Column(TypeName = "decimal(16,0)")]
+        public decimal? AddressIDInvoice { get; set; }
         public string? AddressInvoice { get; set; }
         public string? AddressInvoiceEncoded
         {

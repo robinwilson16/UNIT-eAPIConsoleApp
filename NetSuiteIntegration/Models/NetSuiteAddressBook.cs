@@ -13,7 +13,7 @@ namespace NetSuiteIntegration.Models
     public class NetSuiteAddressBook
     {
         public ICollection<NetSuiteLink>? Links { get; set; }
-        public NetSuiteAddressBookAddress? AddressBookAddress { get; set; }
+        public NetSuiteAddress? AddressBookAddress { get; set; }
         [JsonPropertyName("addressbookaddress_text")]
         public string? AddressBookAddressText { get; set; }
         public string? AddressID { get; set; }

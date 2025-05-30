@@ -14,13 +14,11 @@ namespace NetSuiteIntegration.Models
     public class NetSuiteCustomer
     {
         public ICollection<NetSuiteLink>? Links { get; set; }
-        [JsonIgnore]
         public NetSuiteCustomerAddressBook? AddressBook { get; set; } //Links to Customer ID
         public NetSuiteCustomerAlcoholRecipientType? AlcoholRecipientType { get; set; }
         public double? Balance { get; set; }
         public NetSuiteCustomerCreditHoldOverride? CreditHoldOverride { get; set; }
         public NetSuiteCustomerCurrency? Currency { get; set; }
-        [JsonIgnore]
         public NetSuiteCustomerCurrencyList? CurrencyList { get; set; } //Links to Customer ID
         [JsonPropertyName("custentity_2663_customer_refund")]
         public bool? CustEntity2663CustomerRefund { get; set; }
@@ -59,7 +57,6 @@ namespace NetSuiteIntegration.Models
         public bool? FaxTransactions { get; set; }
         public string? FirstName { get; set; }
         public NetSuiteCustomerGlobalSubscriptionStatus? GlobalSubscriptionStatus { get; set; }
-        [JsonIgnore]
         public NetSuiteCustomerGroupPricing? GroupPricing { get; set; } //Links to Customer ID
 
         [Key]
@@ -68,7 +65,6 @@ namespace NetSuiteIntegration.Models
         public bool? IsBudgetApproved { get; set; }
         public bool? IsInactive { get; set; }
         public bool? IsPerson { get; set; }
-        [JsonIgnore]
         public NetSuiteCustomerItemPricing? ItemPricing { get; set; } //Links to Customer ID
         public NetSuiteCustomerLanguage? Language { get; set; }
         public DateTime? LastModifiedDate { get; set; }
@@ -118,7 +114,6 @@ namespace NetSuiteIntegration.Models
         }
         public bool? PrintTransactions { get; set; }
         public NetSuiteCustomerReceivablesAccount? ReceivablesAccount { get; set; }
-        [JsonIgnore]
         public NetSuiteCustomerSalesTeam? SalesTeam { get; set; } //Links to Customer ID
         public bool? ShipComplete { get; set; }
         public NetSuiteCustomerShippingCarrier? ShippingCarrier { get; set; }
