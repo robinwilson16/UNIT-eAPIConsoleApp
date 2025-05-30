@@ -4,6 +4,7 @@ using Serilog;
 using NetSuiteIntegration.Models;
 using NetSuiteIntegration.Interfaces;
 using NetSuiteIntegration.Services;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using AutoMapper;
 using System.Reflection;
@@ -21,6 +22,10 @@ namespace NetSuiteIntegration
 {
     class Program
     {
+        public static bool? ReadOnly = false;
+        public static bool? FirstRecordOnly = false;
+        public static bool? ForceInsertCustomer = true; //Set to true to force insert a new customer record even if one exists in NetSuite
+
         public static bool CanConnect { get; set; }
         public static string? UNITeAPIToken { get; set; }
         public static bool? UNITeSessionIsValid { get; set; } = false;
@@ -31,8 +36,6 @@ namespace NetSuiteIntegration
         public static string? UNITeRepGenForFees { get; set; } = "NetSuiteExportFees";
         public static string? UNITeRepGenForCreditNotes { get; set; } = "NetSuiteExportCreditNotes";
         public static string? UNITeRepGenForRefunds { get; set; } = "NetSuiteExportRefunds";
-        public static bool? ReadOnly = true;
-        public static bool? FirstRecordOnly = true;
 
         static async Task<int> Main(string[] args)
         {
@@ -53,11 +56,20 @@ namespace NetSuiteIntegration
             //Starter application template using existing design patterns and existing Unit-e Web API code. DI and automapper etc
             //is possibly overkill but added for consistency.
 
+            //Connection String and Entity Framework
+            //string? connectionString = "Server=uk-btn-sql8;Initial Catalog=Netsuite;TrustServerCertificate=True;Integrated Security=True";
+            //var serviceProvider = new ServiceCollection()
+            //    .AddDbContextFactory<ApplicationDbContext>(options =>
+            //        options.UseSqlServer(connectionString))
+            //    .BuildServiceProvider();
+            //var dbContextFactory = serviceProvider.GetService<IDbContextFactory<ApplicationDbContext>>();
+            //using var dbContext = dbContextFactory?.CreateDbContext();
+
             //Base logger information
             using var log = new LoggerConfiguration()
             .WriteTo.Console()
             .WriteTo.MSSqlServer(
-            connectionString: "Server=uk-btn-sql8;Initial Catalog=NetSuite;TrustServerCertificate=True;Integrated Security=True",
+            connectionString: "Server=uk-btn-sql8;Initial Catalog=Netsuite;TrustServerCertificate=True;Integrated Security=True",
             sinkOptions: new MSSqlServerSinkOptions { TableName = "Logs", AutoCreateSqlTable = true })
             .CreateLogger();
 
@@ -120,7 +132,7 @@ namespace NetSuiteIntegration
             log.Information("Start");
 
             //Run main process
-            await process!.Process(UNITeRepGens, ReadOnly, FirstRecordOnly);
+            await process!.Process(UNITeRepGens, ReadOnly, FirstRecordOnly, ForceInsertCustomer);
 
 
             #endregion

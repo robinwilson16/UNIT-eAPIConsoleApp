@@ -355,7 +355,33 @@ namespace NetSuiteIntegration.Models
         public string? AcademicYearName { get; set; }
         public DateTime? AcademicYearStartDate { get; set; }
         public DateTime? AcademicYearEndDate { get; set; }
-
+        public decimal? CourseID { get; set; }
+        public string? CampusCode { get; set; }
+        public string? CampusName { get; set; }
+        public string? DepartmentCode { get; set; }
+        public string? DepartmentName { get; set; }
+        public string? CourseCode { get; set; }
+        public string? CourseTitle { get; set; }
+        public string? CourseTypeCode { get; set; }
+        public string? CourseTypeName { get; set; }
+        public string? SubjectCode { get; set; }
+        public string? SubjectName { get; set; }
+        public string? LevelCode { get; set; }
+        public string? LevelName { get; set; }
+        public string? EnrolmentType { get; set; }
+        public DateTime? StartDateEnrol { get; set; }
+        public DateTime? ExpectedEndDateEnrol { get; set; }
+        public DateTime? ActualEndDateEnrol { get; set; }
+        public DateTime? StartDateProgramme { get; set; }
+        public DateTime? ExpectedEndDateProgramme { get; set; }
+        public DateTime? ActualEndDateProgramme { get; set; }
+        public DateTime? StartDateCourse { get; set; }
+        public DateTime? EndDateCourse { get; set; }
+        public string? EnrolmentStatusCode { get; set; }
+        public string? EnrolmentStatusName { get; set; }
+        public string? ProgressionCode { get; set; }
+        public string? ProgressionName { get; set; }
+        public string? ProgressionCourseCode { get; set; }
         [Column(TypeName = "decimal(19,4)")]
         [DataType(DataType.Currency)]
         public decimal? FeeNet { get; set; }
@@ -369,8 +395,33 @@ namespace NetSuiteIntegration.Models
         [DataType(DataType.Currency)]
         public decimal? FeeDiscount { get; set; }
 
+        [JsonIgnore]
+        public string? CampusFromCourseCode
+        {
+            get
+            {
+                string[]? courseCodeParts = CourseCode?.Split("/");
+                if (courseCodeParts?.Count() == 5)
+                {
+                    return courseCodeParts[0];
+                }
+
+                return null;
+            }
+        }
+
         //Store NetSuite Customer ID once found for linking
         [JsonIgnore]
         public string? NetSuiteCustomerID { get; set; }
+
+        //From Lookup Tables Populated Later
+        [JsonIgnore]
+        public string? NetSuiteLocationID { get; set; }
+        [JsonIgnore]
+        public string? NetSuiteLocationName { get; set; }
+        [JsonIgnore]
+        public string? NetSuiteSubsiduaryID { get; set; }
+        [JsonIgnore]
+        public string? NetSuiteFacultyID { get; set; }
     }
 }

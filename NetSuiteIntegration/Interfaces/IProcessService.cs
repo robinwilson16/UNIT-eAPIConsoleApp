@@ -9,6 +9,6 @@ namespace NetSuiteIntegration.Interfaces
 {
     public interface IProcessService
     {
-        Task<bool?> Process(ICollection<UNITeRepGen>? repGens, bool? readOnly, bool? firstRecordOnly);
+        Task<bool?> Process(ICollection<UNITeRepGen>? repGens, bool? readOnly, bool? firstRecordOnly, bool? forceInsertCustomer);
     }
 }

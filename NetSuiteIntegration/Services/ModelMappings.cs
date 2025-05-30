@@ -49,7 +49,36 @@ namespace NetSuiteIntegration.Services
                     AcademicYearCode = stu.AcademicYearCode,
                     AcademicYearName = stu.AcademicYearName,
                     AcademicYearStartDate = stu.AcademicYearStartDate,
-                    AcademicYearEndDate = stu.AcademicYearEndDate
+                    AcademicYearEndDate = stu.AcademicYearEndDate,
+                    CourseID = stu.CourseID,
+                    CampusCode = stu.CampusCode,
+                    CampusName = stu.CampusName,
+                    DepartmentCode = stu.DepartmentCode,
+                    DepartmentName = stu.DepartmentName,
+                    CourseCode = stu.CourseCode,
+                    CourseTitle = stu.CourseTitle,
+                    CourseTypeCode = stu.CourseTypeCode,
+                    CourseTypeName = stu.CourseTypeName,
+                    SubjectCode = stu.SubjectCode,
+                    SubjectName = stu.SubjectName,
+                    LevelCode = stu.LevelCode,
+                    LevelName = stu.LevelName,
+                    EnrolmentType = stu.EnrolmentType,
+                    StartDateEnrol = stu.StartDateEnrol,
+                    ExpectedEndDateEnrol = stu.ExpectedEndDateEnrol,
+                    ActualEndDateEnrol = stu.ActualEndDateEnrol,
+                    StartDateProgramme = stu.StartDateProgramme,
+                    ExpectedEndDateProgramme = stu.ExpectedEndDateProgramme,
+                    ActualEndDateProgramme = stu.ActualEndDateProgramme,
+                    StartDateCourse = stu.StartDateCourse,
+                    EndDateCourse = stu.EndDateCourse,
+                    EnrolmentStatusCode = stu.EnrolmentStatusCode,
+                    EnrolmentStatusName = stu.EnrolmentStatusName,
+                    ProgressionCode = stu.ProgressionCode,
+                    ProgressionName = stu.ProgressionName,
+                    FeeGross = stu.FeeGross,
+                    FeeNet = stu.FeeNet,
+                    FeeDiscount = stu.FeeDiscount,
                 }).ToList<UNITeStudent>();
 
             return uniteStudents ?? new List<UNITeStudent>();
@@ -62,15 +91,95 @@ namespace NetSuiteIntegration.Services
             //Map UNIT-e Students to NetSuite Customers
             netSuiteCustomers = uniteStudents?.Select(cus => new NetSuiteCustomer
             {
-                CustEntityClientStudentNo = cus.StudentRef,
+                AlcoholRecipientType = new NetSuiteCustomerAlcoholRecipientType
+                {
+                    ID = "CONSUMER",
+                    RefName = "Consumer"
+                },
+                Balance = 0.0,
+                CreditHoldOverride = new NetSuiteCustomerCreditHoldOverride
+                {
+                    ID = "AUTO",
+                    RefName = "Auto"
+                },
+                Currency = new NetSuiteCustomerCurrency
+                {
+                    ID = "1",
+                    RefName = "GBP"
+                },
+                CustEntity2663CustomerRefund = false,
+                CustEntity2663DirectDebit = false,
                 CustEntityCRMApplicantID = cus.ERPID,
-                LastName = cus.Surname,
-                FirstName = cus.Forename,
+                CustEntityEscLastModifiedDate = DateTime.Now.Format("yyyy-MM-dd"),
+                CustEntityF3Campus = new NetSuiteCustomerCustEntityF3Campus
+                {
+                    RefName = cus.CampusName
+                },
+                CustEntityF3StudentStatus = new NetSuiteCustomerCustEntityF3StudentStatus
+                {
+                    ID = cus.EnrolmentStatusCode,
+                    RefName = cus.EnrolmentStatusName
+                },
+                CustEntityNawTransNeedApproval = false,
+                CustEntityClientStudentNo = cus.StudentRef,
+                CustomForm = new NetSuiteCustomerCustomForm
+                {
+                    ID = "163",
+                    RefName = "BIMM - Customers"
+                },
+                DateCreated = DateTime.Now,
+                DaysOverdue = 0,
+                DRAccount = new NetSuiteCustomerDRAccount
+                {
+                    ID = "216",
+                    RefName = "30602 Deferred Revenue"
+                },
                 Email = cus.EmailAddress,
-                Phone = cus.Mobile,
-                IsPerson = true,
+                EmailPreference = new NetSuiteCustomerEmailPreference
+                {
+                    ID = "DEFAULT",
+                    RefName = "Default"
+                },
+                EmailTransactions = false,
+                ExternalID = cus.StudentRef,
+                FaxTransactions = false,
+                FirstName = cus.Forename,
+                GlobalSubscriptionStatus = new NetSuiteCustomerGlobalSubscriptionStatus
+                {
+                    ID = "2",
+                    RefName = "Soft Opt-Out"
+                },
+                IsAutogeneratedRepresentingEntity = false,
+                IsBudgetApproved = false,
                 IsInactive = false,
-                DepositBalance = decimal.ToDouble(cus.FeeGross ?? 0),
+                IsPerson = true,
+                Language = new NetSuiteCustomerLanguage
+                {
+                    ID = "en",
+                    RefName = "English (International)"
+                },
+                LastName = cus.Surname,
+                OverdueBalance = 0,
+                Phone = cus.Mobile,
+                PrintTransactions = false,
+                ReceivablesAccount = new NetSuiteCustomerReceivablesAccount
+                {
+                    ID = "-10",
+                    RefName = "Use System Preference"
+                },
+                ShipComplete = false,
+                ShippingCarrier = new NetSuiteCustomerShippingCarrier
+                {
+                    ID = "nonups",
+                    RefName = "FedEx/USPS/More"
+                },
+                Subsidiary = new NetSuiteCustomerSubsidiary
+                {
+                    RefName = cus.CampusName
+                },
+                SyncSalesTeams = false,
+                UnbilledOrders = 0,
+                Unsubscribe = false,
                 Addresses = new List<NetSuiteAddressBook>{
                     cus.PostCodeMain != null ? new NetSuiteAddressBook {
                         DefaultBilling = true,
@@ -177,7 +286,8 @@ namespace NetSuiteIntegration.Services
                 CustItemIsPOItem = false,
                 CustomForm = new NetSuiteNonInventorySaleItemCustomForm
                 {
-                    RefName = crs.SubjectName
+                    ID = "164",
+                    RefName = "MetFilm - Non Inventory"
                 },
                 DeferredRevenueAccount = new NetSuiteNonInventorySaleItemDeferredRevenueAccount
                 {

@@ -398,11 +398,36 @@ namespace NetSuiteIntegration.Models
         [DataType(DataType.Currency)]
         public decimal? FeeDiscount { get; set; }
 
+        [JsonIgnore]
+        public string? CampusFromCourseCode
+        {
+            get
+            {
+                string[]? courseCodeParts = CourseCode?.Split("/");
+                if (courseCodeParts?.Count() == 5)
+                {
+                    return courseCodeParts[0];
+                }
+
+                return null;
+            }
+        }
+
         //Store NetSuite Customer ID once found for linking
         [JsonIgnore]
         public string? NetSuiteCustomerID { get; set; }
         //Link to NetSuite Non-Inventory Sale Item for this fee
         [JsonIgnore]
         public string? NetSuiteNonInventorySaleItemID { get; set; }
+
+        //From Lookup Tables Populated Later
+        [JsonIgnore]
+        public string? NetSuiteLocationID { get; set; }
+        [JsonIgnore]
+        public string? NetSuiteLocationName { get; set; }
+        [JsonIgnore]
+        public string? NetSuiteSubsiduaryID { get; set; }
+        [JsonIgnore]
+        public string? NetSuiteFacultyID { get; set; }
     }
 }

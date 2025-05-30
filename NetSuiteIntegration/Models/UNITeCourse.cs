@@ -68,7 +68,7 @@ namespace NetSuiteIntegration.Models
         //                return $"{courseCodeParts[0]}/{courseCodeParts[1]}/{courseCodeParts[2]}/Y{yerNumberString}/{courseYear}";
         //            }
         //        }
-                
+
         //        return null;
         //    }
         //}
@@ -140,7 +140,32 @@ namespace NetSuiteIntegration.Models
         //    }
         //}
 
+        [JsonIgnore]
+        public string? CampusFromCourseCode
+        {
+            get
+            {
+                string[]? courseCodeParts = CourseCode?.Split("/");
+                if (courseCodeParts?.Count() == 5)
+                {
+                    return courseCodeParts[0];
+                }
+
+                return null;
+            }
+        }
+
         //Store NetSuite Sale Item ID once found for linking
         public string? NetSuiteNonInventorySaleItemID { get; set; }
+
+        //From Lookup Tables Populated Later
+        [JsonIgnore]
+        public string? NetSuiteLocationID { get; set; }
+        [JsonIgnore]
+        public string? NetSuiteLocationName { get; set; }
+        [JsonIgnore]
+        public string? NetSuiteSubsiduaryID { get; set; }
+        [JsonIgnore]
+        public string? NetSuiteFacultyID { get; set; }
     }
 }

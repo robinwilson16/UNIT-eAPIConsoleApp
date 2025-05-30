@@ -11,14 +11,15 @@ using static NetSuiteIntegration.Models.SharedEnum;
 
 namespace NetSuiteIntegration.Services
 {
-    public class ProcessService(ISRSWebServicecs unite, IFinanceWebService netsuite, ILogger logger) : IProcessService
+    public class ProcessService(NetsuiteContext dbContext, ISRSWebServicecs unite, IFinanceWebService netsuite, ILogger logger) : IProcessService
     {
+        NetsuiteContext _dbContext = dbContext;
         ISRSWebServicecs? _unite = unite;
         IFinanceWebService? _netsuite = netsuite;
         ILogger? _log = logger;
         string? _divider = new string('#', 20);
 
-        public async Task<bool?> Process(ICollection<UNITeRepGen>? repGens, bool? readOnly, bool? firstRecordOnly)
+        public async Task<bool?> Process(ICollection<UNITeRepGen>? repGens, bool? readOnly, bool? firstRecordOnly, bool? forceInsertCustomer)
         {
             //Steps
             //1. Get UNIT-e Enrolments in Scope
@@ -67,7 +68,7 @@ namespace NetSuiteIntegration.Services
             bool? isOK = true;
 
             //Process the data
-            isOK = await DoImport(repGens, readOnly,firstRecordOnly);
+            isOK = await DoImport(repGens, readOnly,firstRecordOnly, forceInsertCustomer);
 
             return isOK;
         }
@@ -117,7 +118,7 @@ namespace NetSuiteIntegration.Services
             return true;
         }
 
-        public async Task<bool?> DoImport(ICollection<UNITeRepGen>? repGens, bool? readOnly, bool? firstRecordOnly)
+        public async Task<bool?> DoImport(ICollection<UNITeRepGen>? repGens, bool? readOnly, bool? firstRecordOnly, bool? forceInsertCustomer)
         {
             bool? studentOK = true;
             bool? courseOK = true;
@@ -130,8 +131,8 @@ namespace NetSuiteIntegration.Services
             string? refundRepGen = repGens?.FirstOrDefault(rg => rg.Type == UNITeRepGenType.Refund)?.Reference;
 
             //Process the data
-            ICollection<NetSuiteCustomer>? uniteNetSuiteCustomers = await ProcessEnrolments(enrolmentRepGen, readOnly, firstRecordOnly);
-            ICollection<NetSuiteNonInventorySaleItem>? uniteNetSuiteNonInventorySaleItems = await ProcessCourses(courseRepGen, readOnly, firstRecordOnly);
+            ICollection<NetSuiteCustomer>? uniteNetSuiteCustomers = await ProcessEnrolments(enrolmentRepGen, readOnly, firstRecordOnly, forceInsertCustomer);
+            ICollection<NetSuiteNonInventorySaleItem>? uniteNetSuiteNonInventorySaleItems = await ProcessCourses(courseRepGen, readOnly, firstRecordOnly, forceInsertCustomer);
 
             //If empty lists are returned then there has been an error as there should always be students and courses in scope
             if (uniteNetSuiteCustomers == null || uniteNetSuiteCustomers.Count == 0)
@@ -144,11 +145,11 @@ namespace NetSuiteIntegration.Services
             }
 
             //As long as students has items then process the fees, credit notes and refunds
-            studentOK = studentOK == true ? await ProcessFees(uniteNetSuiteCustomers, feeRepGen, readOnly, firstRecordOnly) : studentOK;
-            studentOK = studentOK == true ? await ProcessCreditNotes(uniteNetSuiteCustomers, creditNoteRepGen, readOnly, firstRecordOnly) : studentOK;
+            studentOK = studentOK == true ? await ProcessFees(uniteNetSuiteCustomers, feeRepGen, readOnly, firstRecordOnly, forceInsertCustomer) : studentOK;
+            studentOK = studentOK == true ? await ProcessCreditNotes(uniteNetSuiteCustomers, creditNoteRepGen, readOnly, firstRecordOnly, forceInsertCustomer) : studentOK;
 
             //Not currently processing refunds as is part of stage 2 dev
-            //studentOK = studentOK == true ? await ProcessRefunds(uniteNetSuiteCustomers, refundRepGen, readOnly, firstRecordOnly) : studentOK;
+            //studentOK = studentOK == true ? await ProcessRefunds(uniteNetSuiteCustomers, refundRepGen, readOnly, firstRecordOnly, forceInsertCustomer) : studentOK;
 
             if (studentOK == true && courseOK == true)
                 return true;
@@ -156,7 +157,7 @@ namespace NetSuiteIntegration.Services
                 return false;
         }
 
-        public async Task<ICollection<NetSuiteCustomer>?> ProcessEnrolments(string? enrolmentRepGen, bool? readOnly, bool? firstRecordOnly)
+        public async Task<ICollection<NetSuiteCustomer>?> ProcessEnrolments(string? enrolmentRepGen, bool? readOnly, bool? firstRecordOnly, bool? forceInsertCustomer)
         {
             //Returns the Customers with the ID added so can be used in other methods
 
@@ -164,7 +165,7 @@ namespace NetSuiteIntegration.Services
 
             ICollection<NetSuiteCustomer>? uniteNetSuiteCustomers = new List<NetSuiteCustomer>();
             ICollection<UNITeStudent>? uniteStudents = new List<UNITeStudent>();
-            ICollection<UNITeEnrolment>? uniteEnrolments = new List<UNITeEnrolment>();
+            IList<UNITeEnrolment>? uniteEnrolments = new List<UNITeEnrolment>();
             NetSuiteCustomer? matchedCustomer = new NetSuiteCustomer();
 
             if (enrolmentRepGen != null && enrolmentRepGen.Length > 0)
@@ -193,6 +194,13 @@ namespace NetSuiteIntegration.Services
                 {
                     _log?.Information($"Loaded {uniteEnrolments?.Count} UNIT-e Enrolments");
 
+                    if (_unite != null && _dbContext != null && _netsuite != null && _log != null)
+                    {
+                        var netSuiteLookups = new NetSuiteLookups(_dbContext, _unite, _netsuite, _log);
+                        uniteEnrolments = await netSuiteLookups.GetCampusMappings<UNITeEnrolment>(uniteEnrolments);
+                        _log?.Information($"First Mapped Location: {uniteEnrolments?.FirstOrDefault()?.NetSuiteLocationID}");
+                    }
+
                     if (uniteEnrolments != null)
                         uniteStudents = ModelMappings.MapUNITeEnrolmentsToUNITeStudents(uniteEnrolments);
 
@@ -206,12 +214,26 @@ namespace NetSuiteIntegration.Services
                         int rowNumber = 0;
                         foreach (NetSuiteCustomer? uniteNetSuiteCustomer in uniteNetSuiteCustomers!)
                         {
+                            if (uniteNetSuiteCustomer == null)
+                                continue; //Skip null customers
+
                             rowNumber++;
                             _log?.Information($"\nRecord {rowNumber} of {uniteNetSuiteCustomers.Count}: Searching for {uniteNetSuiteCustomer?.LastName}, {uniteNetSuiteCustomer?.FirstName} ({uniteNetSuiteCustomer?.CustEntityClientStudentNo}) in NetSuite");
 
                             #region Find Customer and Related Datasets
                             //Find this student (customer) in NetSuite
-                            matchedCustomer = await GetNetSuiteCustomer(uniteNetSuiteCustomer ?? new NetSuiteCustomer());
+
+                            if (forceInsertCustomer == true)
+                            {
+                                _log?.Information($"**Force Insert Customer**: Will insert a new customer record even if one exists in NetSuite");
+                                uniteNetSuiteCustomer!.LastName = $"{uniteNetSuiteCustomer.LastName}_Inserted";
+                                uniteNetSuiteCustomer!.FirstName = $"{uniteNetSuiteCustomer.FirstName}_Inserted";
+                                matchedCustomer = new NetSuiteCustomer();
+                            }
+                            else
+                            {
+                                matchedCustomer = await GetNetSuiteCustomer(uniteNetSuiteCustomer ?? new NetSuiteCustomer());
+                            }
 
                             if (matchedCustomer?.CustomerMatchType == CustomerMatchType.ByStudentRef)
                                 _log?.Information($"Customer Found in NetSuite by Student Ref with NetSuite Customer ID: {matchedCustomer?.ID}");
@@ -299,7 +321,7 @@ namespace NetSuiteIntegration.Services
             return uniteNetSuiteCustomers;
         }
 
-        public async Task<ICollection<NetSuiteNonInventorySaleItem>?> ProcessCourses(string? courseRepGen, bool? readOnly, bool? firstRecordOnly)
+        public async Task<ICollection<NetSuiteNonInventorySaleItem>?> ProcessCourses(string? courseRepGen, bool? readOnly, bool? firstRecordOnly, bool? forceInsertCustomer)
         {
             //Returns the sale items with the ID added so can be used in other methods
 
@@ -405,7 +427,7 @@ namespace NetSuiteIntegration.Services
             return uniteNetSuiteNonInventorySaleItems;
         }
 
-        public async Task<bool?> ProcessFees(ICollection<NetSuiteCustomer>? customers, string? feeRepGen, bool? readOnly, bool? firstRecordOnly)
+        public async Task<bool?> ProcessFees(ICollection<NetSuiteCustomer>? customers, string? feeRepGen, bool? readOnly, bool? firstRecordOnly, bool? forceInsertCustomer)
         {
             _log?.Information($"\n{_divider}");
 
@@ -559,7 +581,7 @@ namespace NetSuiteIntegration.Services
             return isOK;
         }
 
-        public async Task<bool?> ProcessCreditNotes(ICollection<NetSuiteCustomer>? customers, string? creditNoteRepGen, bool? readOnly, bool? firstRecordOnly)
+        public async Task<bool?> ProcessCreditNotes(ICollection<NetSuiteCustomer>? customers, string? creditNoteRepGen, bool? readOnly, bool? firstRecordOnly, bool? forceInsertCustomer)
         {
             _log?.Information($"\n{_divider}");
 
@@ -712,7 +734,7 @@ namespace NetSuiteIntegration.Services
             return isOK;
         }
 
-        public async Task<bool?> ProcessRefunds(ICollection<NetSuiteCustomer>? customers, string? refundRepGen, bool? readOnly, bool? firstRecordOnly)
+        public async Task<bool?> ProcessRefunds(ICollection<NetSuiteCustomer>? customers, string? refundRepGen, bool? readOnly, bool? firstRecordOnly, bool? forceInsertCustomer)
         {
             _log?.Information($"\n{_divider}");
 
