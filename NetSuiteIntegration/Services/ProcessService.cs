@@ -146,7 +146,9 @@ namespace NetSuiteIntegration.Services
             //As long as students has items then process the fees, credit notes and refunds
             studentOK = studentOK == true ? await ProcessFees(uniteNetSuiteCustomers, feeRepGen, readOnly, firstRecordOnly) : studentOK;
             studentOK = studentOK == true ? await ProcessCreditNotes(uniteNetSuiteCustomers, creditNoteRepGen, readOnly, firstRecordOnly) : studentOK;
-            studentOK = studentOK == true ? await ProcessRefunds(uniteNetSuiteCustomers, refundRepGen, readOnly, firstRecordOnly) : studentOK;
+
+            //Not currently processing refunds as is part of stage 2 dev
+            //studentOK = studentOK == true ? await ProcessRefunds(uniteNetSuiteCustomers, refundRepGen, readOnly, firstRecordOnly) : studentOK;
 
             if (studentOK == true && courseOK == true)
                 return true;
@@ -332,15 +334,6 @@ namespace NetSuiteIntegration.Services
                 else
                 {
                     _log?.Information($"Loaded {uniteCourses?.Count} UNIT-e Courses");
-
-                    if (uniteCourses != null && uniteCourses.Count > 0)
-                    {
-                        foreach (UNITeCourse? course in uniteCourses!)
-                        {
-                            //If the course is not active then skip it
-                             _log?.Information($"Course: {course?.CourseCode} - {course?.CourseCodeNextYear} : {course?.StartDateCourse} - {course?.StartDateNextYear} : {course?.EndDateCourse} - {course?.EndDateNextYear}");
-                        }
-                    }
 
                     if (uniteCourses != null)
                         uniteNetSuiteNonInventorySaleItems = ModelMappings.MapUNITeCoursesToNetSuiteNonInventorySaleItems(uniteCourses);

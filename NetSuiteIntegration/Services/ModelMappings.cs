@@ -196,8 +196,10 @@ namespace NetSuiteIntegration.Services
                 IncludeChildren = false,
                 IncomeAccount = new NetSuiteNonInventorySaleItemIncomeAccount
                 {
-                    ID = "1233",
-                    RefName = "50120 Total Net Income : Total Fee Income : Fee Income - Postgrad"
+                    ID = crs.EnrolmentType == "PostGrad" ? "1233" : "3003",
+                    RefName = crs.EnrolmentType == "PostGrad" ? 
+                        "50120 Total Net Income : Total Fee Income : Fee Income - Postgrad"
+                        : "50115 Total Net Income : Total Fee Income : Fee Income - Undergrad"
                 },
                 IsFulfillable = false,
                 IsGCOCompliant = false,

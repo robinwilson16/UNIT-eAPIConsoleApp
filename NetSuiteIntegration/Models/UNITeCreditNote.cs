@@ -371,6 +371,7 @@ namespace NetSuiteIntegration.Models
         public string? SubjectName { get; set; }
         public string? LevelCode { get; set; }
         public string? LevelName { get; set; }
+        public string? EnrolmentType { get; set; }
         public DateTime? StartDateEnrol { get; set; }
         public DateTime? ExpectedEndDateEnrol { get; set; }
         public DateTime? ActualEndDateEnrol { get; set; }
