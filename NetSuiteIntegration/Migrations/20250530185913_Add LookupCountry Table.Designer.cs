@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NetSuiteIntegration.Data;
 
@@ -10,9 +11,11 @@ using NetSuiteIntegration.Data;
 namespace NetSuiteIntegration.Migrations
 {
     [DbContext(typeof(NetsuiteContext))]
-    partial class NetsuiteContextModelSnapshot : ModelSnapshot
+    [Migration("20250530185913_Add LookupCountry Table")]
+    partial class AddLookupCountryTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -54,9 +57,9 @@ namespace NetSuiteIntegration.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<string>("NetSuiteCountryName")
-                        .HasMaxLength(250)
-                        .HasColumnType("nvarchar(250)");
+                    b.Property<string>("NetSuiteCountryCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.HasKey("UNITeCountryCode");
 

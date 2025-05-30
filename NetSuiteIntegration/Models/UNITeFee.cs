@@ -429,5 +429,13 @@ namespace NetSuiteIntegration.Models
         public string? NetSuiteSubsiduaryID { get; set; }
         [JsonIgnore]
         public string? NetSuiteFacultyID { get; set; }
+        [JsonIgnore]
+        public string? NetSuiteCountryNameMain { get; set; }
+        [JsonIgnore]
+        public string? NetSuiteCountryNameTermTime { get; set; }
+        [JsonIgnore]
+        public string? NetSuiteCountryNameHome { get; set; }
+        [JsonIgnore]
+        public string? NetSuiteCountryNameInvoice { get; set; }
     }
 }

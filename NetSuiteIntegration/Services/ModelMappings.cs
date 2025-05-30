@@ -79,6 +79,10 @@ namespace NetSuiteIntegration.Services
                     FeeGross = stu.FeeGross,
                     FeeNet = stu.FeeNet,
                     FeeDiscount = stu.FeeDiscount,
+                    NetSuiteLocationID = stu.NetSuiteLocationID,
+                    NetSuiteLocationName = stu.NetSuiteLocationName,
+                    NetSuiteSubsiduaryID = stu.NetSuiteSubsiduaryID,
+                    NetSuiteFacultyID = stu.NetSuiteFacultyID
                 }).ToList<UNITeStudent>();
 
             return uniteStudents ?? new List<UNITeStudent>();
@@ -105,7 +109,10 @@ namespace NetSuiteIntegration.Services
                 Currency = new NetSuiteCustomerCurrency
                 {
                     ID = "1",
-                    RefName = "GBP"
+                    RefName = 
+                        cus.NetSuiteLocationName == "Berlin" ? "EUR" :
+                        cus.NetSuiteLocationName == "Dublin" ? "EUR" :
+                        "GBP"
                 },
                 CustEntity2663CustomerRefund = false,
                 CustEntity2663DirectDebit = false,
@@ -113,11 +120,10 @@ namespace NetSuiteIntegration.Services
                 CustEntityEscLastModifiedDate = DateTime.Now.Format("yyyy-MM-dd"),
                 CustEntityF3Campus = new NetSuiteCustomerCustEntityF3Campus
                 {
-                    RefName = cus.CampusName
+                    ID = cus.NetSuiteLocationID
                 },
                 CustEntityF3StudentStatus = new NetSuiteCustomerCustEntityF3StudentStatus
                 {
-                    ID = cus.EnrolmentStatusCode,
                     RefName = cus.EnrolmentStatusName
                 },
                 CustEntityNawTransNeedApproval = false,
@@ -141,6 +147,11 @@ namespace NetSuiteIntegration.Services
                     RefName = "Default"
                 },
                 EmailTransactions = false,
+                EntityStatus = new NetSuiteCustomerEntityStatus
+                {
+                    ID = "13",
+                    RefName = "CLIENT-Closed Won"
+                },
                 ExternalID = cus.StudentRef,
                 FaxTransactions = false,
                 FirstName = cus.Forename,
@@ -175,7 +186,7 @@ namespace NetSuiteIntegration.Services
                 },
                 Subsidiary = new NetSuiteCustomerSubsidiary
                 {
-                    RefName = cus.CampusName
+                    ID = cus.NetSuiteSubsiduaryID
                 },
                 SyncSalesTeams = false,
                 UnbilledOrders = 0,
@@ -194,7 +205,7 @@ namespace NetSuiteIntegration.Services
                             City = cus.Address3Main,
                             Country = new NetSuiteAddressCountry
                             {
-                                RefName = cus.CountryNameMain
+                                RefName = cus.NetSuiteCountryNameMain
                             },
                             Override = false,
                             Zip = cus.PostCodeMain
@@ -214,7 +225,7 @@ namespace NetSuiteIntegration.Services
                             City = cus.Address3TermTime,
                             Country = new NetSuiteAddressCountry
                             {
-                                RefName = cus.CountryNameTermTime
+                                RefName = cus.NetSuiteCountryNameTermTime
                             },
                             Override = false,
                             Zip = cus.PostCodeTermTime
@@ -234,7 +245,7 @@ namespace NetSuiteIntegration.Services
                             City = cus.Address3Home,
                             Country = new NetSuiteAddressCountry
                             {
-                                RefName = cus.CountryNameHome
+                                RefName = cus.NetSuiteCountryNameHome
                             },
                             Override = false,
                             Zip = cus.PostCodeHome
@@ -254,7 +265,7 @@ namespace NetSuiteIntegration.Services
                             City = cus.Address3Invoice,
                             Country = new NetSuiteAddressCountry
                             {
-                                RefName = cus.CountryNameInvoice
+                                RefName = cus.NetSuiteCountryNameInvoice
                             },
                             Override = false,
                             Zip = cus.PostCodeInvoice
@@ -278,7 +289,7 @@ namespace NetSuiteIntegration.Services
             {
                 Class = new NetSuiteNonInventorySaleItemClass
                 {
-                    RefName = crs.CampusName
+                    ID = crs.NetSuiteSubsiduaryID
                 },
                 CreatedDate = DateTime.Now,
                 CustItem1 = crs.StartDateCourse?.Format("yyyy-MM-dd"),
@@ -318,7 +329,7 @@ namespace NetSuiteIntegration.Services
                 ItemID = crs.CourseCode,
                 Location = new NetSuiteNonInventorySaleItemLocation
                 {
-                    RefName = crs.CampusName
+                    ID = crs.NetSuiteLocationID
                 },
                 RevenueRecognitionRule = new NetSuiteNonInventorySaleItemRevenueRecognitionRule
                 {
@@ -377,13 +388,16 @@ namespace NetSuiteIntegration.Services
                 CanHaveStackable = false,
                 Class = new NetSuiteInvoiceClass
                 {
-                    RefName = $"{inv.SubjectName}: {inv.CampusName}"
+                    RefName = $"{inv.SubjectName}: {inv.NetSuiteLocationName}"
                 },
                 CreatedDate = DateTime.Now,
                 Currency = new NetSuiteInvoiceCurrency
                 {
                     ID = "1",
-                    RefName = "GBP"
+                    RefName =
+                        inv.NetSuiteLocationName == "Berlin" ? "EUR" :
+                        inv.NetSuiteLocationName == "Dublin" ? "EUR" :
+                        "GBP"
                 },
                 Custbody15699ExcludeFromEPProcess = false,
                 CustbodyAtlasExistCustHdn = new NetSuiteInvoiceCustbodyAtlasExistCustHdn
@@ -444,7 +458,7 @@ namespace NetSuiteIntegration.Services
                 ExternalID = $"ENR_{inv.EnrolmentID.ToString()}",
                 Location = new NetSuiteInvoiceLocation
                 {
-                    RefName = inv.CampusName
+                    ID = inv.NetSuiteLocationID
                 },
                 Memo = $"{(inv.AcademicYearName?.Length == 9? inv.AcademicYearName?.Substring(2, 2) : inv.AcademicYearName)}/{(inv.AcademicYearName?.Length == 9 ? inv.AcademicYearName?.Substring(7, 2) : inv.AcademicYearName)} INVOICE",
                 NextApprover = new NetSuiteInvoiceNextApprover
@@ -478,7 +492,7 @@ namespace NetSuiteIntegration.Services
                 },
                 Subsidiary = new NetSuiteInvoiceSubsidiary
                 {
-                    RefName = inv.CampusName
+                    ID = inv.NetSuiteSubsiduaryID
                 },
                 Subtotal = decimal.ToDouble(inv.FeeGross ?? 0),
                 ToBeEmailed = false,
@@ -496,7 +510,7 @@ namespace NetSuiteIntegration.Services
                         Amount = decimal.ToDouble(inv.FeeGross ?? 0),
                         Class = new NetSuiteInvoiceItemDetailClass
                         {
-                            RefName = $"{inv.SubjectName}: {inv.CampusName}"
+                            RefName = $"{inv.SubjectName}: {inv.NetSuiteLocationName}"
                         },
                         CostEstimate = 0,
                         CostEstimateRate = 0,
@@ -533,7 +547,7 @@ namespace NetSuiteIntegration.Services
                         //Line = 1,
                         Location = new NetSuiteInvoiceItemDetailLocation
                         {
-                            RefName = inv.CampusName
+                            ID = inv.NetSuiteLocationID
                         },
                         Marginal = false,
                         Price = new NetSuiteInvoiceItemDetailPrice
@@ -552,7 +566,7 @@ namespace NetSuiteIntegration.Services
                         Amount = decimal.ToDouble(inv.FeeDiscount ?? 0),
                         Class = new NetSuiteInvoiceItemDetailClass
                         {
-                            RefName = $"{inv.SubjectName}: {inv.CampusName}"
+                            RefName = $"{inv.SubjectName}: {inv.NetSuiteLocationName}"
                         },
                         CostEstimate = 0,
                         CostEstimateRate = 0,
@@ -571,7 +585,10 @@ namespace NetSuiteIntegration.Services
                             ID = "26",
                             RefName = "Income : Student Income"
                         },
-                        Description = "CREDIT_TUT_GBP",
+                        Description =
+                            inv.NetSuiteLocationName == "Berlin" ? "CREDIT_TUT_EUR" :
+                            inv.NetSuiteLocationName == "Dublin" ? "CREDIT_TUT_EUR" :
+                            "CREDIT_TUT_GBP",
                         Item = new NetSuiteInvoiceItemDetailItem
                         {
                             ID = "5457" //50220 Discounts
@@ -589,7 +606,7 @@ namespace NetSuiteIntegration.Services
                         //Line = 2,
                         Location = new NetSuiteInvoiceItemDetailLocation
                         {
-                            RefName = inv.CampusName
+                            ID = inv.NetSuiteLocationID
                         },
                         Marginal = false,
                         Price = new NetSuiteInvoiceItemDetailPrice
@@ -637,13 +654,16 @@ namespace NetSuiteIntegration.Services
                 CanHaveStackable = false,
                 Class = new NetSuiteCreditMemoClass
                 {
-                    RefName = $"{cre.SubjectName}: {cre.CampusName}"
+                    RefName = $"{cre.SubjectName}: {cre.NetSuiteLocationName}"
                 },
                 CreatedDate = DateTime.Now,
                 Currency = new NetSuiteCreditMemoCurrency
                 {
                     ID = "1",
-                    RefName = "GBP"
+                    RefName =
+                        cre.NetSuiteLocationName == "Berlin" ? "EUR" :
+                        cre.NetSuiteLocationName == "Dublin" ? "EUR" :
+                        "GBP"
                 },
                 Custbody15699ExcludeFromEPProcess = false,
                 CustbodyAtlasExistCustHdn = new NetSuiteCreditMemoCustbodyAtlasExistCustHdn
@@ -705,9 +725,16 @@ namespace NetSuiteIntegration.Services
                 ExternalID = $"ENR_{cre.EnrolmentID.ToString()}",
                 Location = new NetSuiteCreditMemoLocation
                 {
-                    RefName = cre.CampusName
+                    ID = cre.NetSuiteLocationID
                 },
-                Memo = $"{cre.CourseCode}, CREDIT_TUT_GBP, {(cre.Forename?.Length >= 3? cre.Forename?.Substring(0, 3) : cre.Forename)}{(cre.Surname?.Length >= 3 ? cre.Surname?.Substring(0, 3) : cre.Surname)}, UNIT-e Ref={cre.StudentRef}",
+                Memo = @$"
+                    {cre.CourseCode}, 
+                    {(cre.NetSuiteLocationName == "Berlin" ? "CREDIT_TUT_EUR" :
+                    cre.NetSuiteLocationName == "Dublin" ? "CREDIT_TUT_EUR" :
+                    "CREDIT_TUT_GBP")}, 
+                    {(cre.Forename?.Length >= 3? cre.Forename?.Substring(0, 3) : cre.Forename)}
+                    {(cre.Surname?.Length >= 3 ? cre.Surname?.Substring(0, 3) : cre.Surname)}
+                    , UNIT-e Ref={cre.StudentRef}",
                 Originator = "UNIT-e",
                 PostingPeriod = new NetSuiteCreditMemoPostingPeriod
                 {
@@ -734,7 +761,7 @@ namespace NetSuiteIntegration.Services
                 },
                 Subsidiary = new NetSuiteCreditMemoSubsidiary
                 {
-                    RefName = cre.CampusName
+                    ID = cre.NetSuiteSubsiduaryID
                 },
                 Subtotal = decimal.ToDouble(cre.FeeGross ?? 0),
                 ToBeEmailed = false,
@@ -793,7 +820,7 @@ namespace NetSuiteIntegration.Services
                         //Line = 1,
                         Location = new NetSuiteCreditMemoItemDetailLocation
                         {
-                            RefName = cre.CampusName
+                            ID = cre.NetSuiteLocationID
                         },
                         Marginal = false,
                         Price = new NetSuiteCreditMemoItemDetailPrice
@@ -839,7 +866,10 @@ namespace NetSuiteIntegration.Services
                 Currency = new NetSuiteCustomerRefundCurrency
                 {
                     ID = "1",
-                    RefName = "GBP"
+                    RefName =
+                        re.NetSuiteLocationName == "Berlin" ? "EUR" :
+                        re.NetSuiteLocationName == "Dublin" ? "EUR" :
+                        "GBP"
                 },
                 Custbody9997AutocashAssertionField = false,
                 Custbody9997IsForEpDd = false,
@@ -888,7 +918,7 @@ namespace NetSuiteIntegration.Services
                 PrevDate = re.ActualEndDateEnrol?.Format("yyyy-MM-dd"),
                 Subsidiary = new NetSuiteCustomerRefundSubsidiary
                 {
-                    RefName = re.CampusName
+                    ID = re.NetSuiteSubsiduaryID
                 },
                 ToBePrinted = false,
                 Total = decimal.ToDouble(re.FeeGross ?? 0),

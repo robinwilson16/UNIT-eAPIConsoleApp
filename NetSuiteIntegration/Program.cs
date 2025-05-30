@@ -17,13 +17,14 @@ using System.Text;
 using System.Web;
 using System.Text.Json;
 using System.Reflection.Metadata;
+using NetSuiteIntegration.Data;
 
 namespace NetSuiteIntegration
 {
     class Program
     {
         public static bool? ReadOnly = false;
-        public static bool? FirstRecordOnly = false;
+        public static bool? FirstRecordOnly = true;
         public static bool? ForceInsertCustomer = true; //Set to true to force insert a new customer record even if one exists in NetSuite
 
         public static bool CanConnect { get; set; }

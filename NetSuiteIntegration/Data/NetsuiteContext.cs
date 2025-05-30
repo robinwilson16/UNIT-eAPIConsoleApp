@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
+using NetSuiteIntegration.Models;
 
-namespace NetSuiteIntegration.Models;
+namespace NetSuiteIntegration.Data;
 
 public partial class NetsuiteContext : DbContext
 {
@@ -16,6 +17,7 @@ public partial class NetsuiteContext : DbContext
     }
 
     public virtual DbSet<LookupCampus> LookupCampus { get; set; }
+    public virtual DbSet<LookupCountry> LookupCountry { get; set; }
     public virtual DbSet<Setting> Settings { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

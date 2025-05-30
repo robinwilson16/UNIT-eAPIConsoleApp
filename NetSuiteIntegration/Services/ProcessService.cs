@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using System.Net;
 using Microsoft.EntityFrameworkCore;
+using NetSuiteIntegration.Data;
 using NetSuiteIntegration.Interfaces;
 using NetSuiteIntegration.Models;
 using NetSuiteIntegration.Shared;
@@ -165,7 +166,7 @@ namespace NetSuiteIntegration.Services
 
             ICollection<NetSuiteCustomer>? uniteNetSuiteCustomers = new List<NetSuiteCustomer>();
             ICollection<UNITeStudent>? uniteStudents = new List<UNITeStudent>();
-            IList<UNITeEnrolment>? uniteEnrolments = new List<UNITeEnrolment>();
+            ICollection<UNITeEnrolment>? uniteEnrolments = new List<UNITeEnrolment>();
             NetSuiteCustomer? matchedCustomer = new NetSuiteCustomer();
 
             if (enrolmentRepGen != null && enrolmentRepGen.Length > 0)
@@ -197,8 +198,14 @@ namespace NetSuiteIntegration.Services
                     if (_unite != null && _dbContext != null && _netsuite != null && _log != null)
                     {
                         var netSuiteLookups = new NetSuiteLookups(_dbContext, _unite, _netsuite, _log);
-                        uniteEnrolments = await netSuiteLookups.GetCampusMappings<UNITeEnrolment>(uniteEnrolments);
-                        _log?.Information($"First Mapped Location: {uniteEnrolments?.FirstOrDefault()?.NetSuiteLocationID}");
+                        if (uniteEnrolments != null && uniteEnrolments.Count > 0)
+                            uniteEnrolments = await netSuiteLookups.GetCampusMappings<UNITeEnrolment>(uniteEnrolments);
+
+                        //_log?.Information($"First Mapped Location: {uniteEnrolments?.FirstOrDefault()?.NetSuiteLocationID}");
+                        if (uniteEnrolments != null && uniteEnrolments.Count > 0)
+                            uniteEnrolments = await netSuiteLookups.GetCountryMappings<UNITeEnrolment>(uniteEnrolments);
+
+                        //_log?.Information($"First Mapped Country: {uniteEnrolments?.FirstOrDefault()?.NetSuiteCountryNameMain}");
                     }
 
                     if (uniteEnrolments != null)
@@ -220,7 +227,7 @@ namespace NetSuiteIntegration.Services
                             rowNumber++;
                             _log?.Information($"\nRecord {rowNumber} of {uniteNetSuiteCustomers.Count}: Searching for {uniteNetSuiteCustomer?.LastName}, {uniteNetSuiteCustomer?.FirstName} ({uniteNetSuiteCustomer?.CustEntityClientStudentNo}) in NetSuite");
 
-                            #region Find Customer and Related Datasets
+                            #region Find Customer
                             //Find this student (customer) in NetSuite
 
                             if (forceInsertCustomer == true)
@@ -228,6 +235,7 @@ namespace NetSuiteIntegration.Services
                                 _log?.Information($"**Force Insert Customer**: Will insert a new customer record even if one exists in NetSuite");
                                 uniteNetSuiteCustomer!.LastName = $"{uniteNetSuiteCustomer.LastName}_Inserted";
                                 uniteNetSuiteCustomer!.FirstName = $"{uniteNetSuiteCustomer.FirstName}_Inserted";
+                                uniteNetSuiteCustomer!.ExternalID = $"{uniteNetSuiteCustomer.ExternalID}_Inserted";
                                 matchedCustomer = new NetSuiteCustomer();
                             }
                             else
@@ -244,6 +252,42 @@ namespace NetSuiteIntegration.Services
                             else
                                 _log?.Information($"Customer Not Found in NetSuite");
 
+                            #endregion
+
+                            #region Perform Updates to NetSuite Customer
+                            //Update or add the Customer record in NetSuite
+                            NetSuiteCustomer updatedCustomer = await UpdateNetSuiteCustomer(uniteNetSuiteCustomer ?? new NetSuiteCustomer(), readOnly);
+
+                            //Update the ID of the record that came from UNIT-e so it matches the newly inserted record if not updating an existing NetSuite record
+                            if (uniteNetSuiteCustomer != null)
+                            {
+                                if (updatedCustomer?.RecordActionType == RecordActionType.Insert)
+                                {
+                                    //The NetSuite API does not return the newly inserted object so need to retrieve it again to get the ID
+                                    updatedCustomer = await GetNetSuiteCustomer(uniteNetSuiteCustomer ?? new NetSuiteCustomer());
+                                    updatedCustomer.RecordActionType = RecordActionType.Insert;
+
+                                    //Add the ID of the newly inserted record to the UNIT-e record
+                                    uniteNetSuiteCustomer!.ID = updatedCustomer?.ID;
+                                    _log?.Information($"Inserted New NetSuite Customer: {uniteNetSuiteCustomer?.ID}");
+                                }
+                                else if (updatedCustomer?.RecordActionType == RecordActionType.Update)
+                                {
+                                    _log?.Information($"Synced Existing NetSuite Customer: {uniteNetSuiteCustomer?.ID}");
+                                }
+                                else if (readOnly == true)
+                                {
+                                    _log?.Information($"**Read Only Mode**: No Changes Made to NetSuite Customer: {uniteNetSuiteCustomer?.ID}");
+                                }
+                                else
+                                {
+                                    _log?.Information($"No Changes Made to NetSuite Customer: {uniteNetSuiteCustomer?.ID}");
+                                }
+                            }
+
+                            #endregion
+
+                            #region Check Addresses
                             int? numUniteAddresses = uniteNetSuiteCustomer?.Addresses?.Where(a => a.Label != null).DistinctBy(a => a.Label).ToList().Count ?? 0;
 
                             if (matchedCustomer?.ID != null)
@@ -270,36 +314,9 @@ namespace NetSuiteIntegration.Services
                             //Check if addresses are up to date and flag each one for insert or update
                             if (uniteNetSuiteCustomer != null)
                                 uniteNetSuiteCustomer.Addresses = CheckNetSuiteAddresses(uniteNetSuiteCustomer, matchedCustomer);
-
                             #endregion
 
-                            #region Perform Updates to NetSuite Customer
-                            //Update or add the Customer record in NetSuite
-                            NetSuiteCustomer updatedCustomer = await UpdateNetSuiteCustomer(uniteNetSuiteCustomer ?? new NetSuiteCustomer(), readOnly);
-
-                            //Update the ID of the record that came from UNIT-e so it matches the newly inserted record if not updating an existing NetSuite record
-                            if (uniteNetSuiteCustomer != null)
-                            {
-                                if (updatedCustomer?.RecordActionType == RecordActionType.Insert)
-                                {
-                                    //Add the ID of the newly inserted record to the UNIT-e record
-                                    uniteNetSuiteCustomer.ID = updatedCustomer?.ID;
-                                    _log?.Information($"Inserted New NetSuite Customer: {uniteNetSuiteCustomer?.ID}");
-                                }
-                                else if (updatedCustomer?.RecordActionType == RecordActionType.Update)
-                                {
-                                    _log?.Information($"Synced Existing NetSuite Customer: {uniteNetSuiteCustomer?.ID}");
-                                }
-                                else if (readOnly == true)
-                                {
-                                    _log?.Information($"**Read Only Mode**: No Changes Made to NetSuite Customer: {uniteNetSuiteCustomer?.ID}");
-                                }
-                                else
-                                {
-                                    _log?.Information($"No Changes Made to NetSuite Customer: {uniteNetSuiteCustomer?.ID}");
-                                }
-                            }
-
+                            #region Update Addresses
                             //Update the addresses in NetSuite
                             bool? addressesUpdated = false;
                             if (uniteNetSuiteCustomer != null)
@@ -357,6 +374,15 @@ namespace NetSuiteIntegration.Services
                 {
                     _log?.Information($"Loaded {uniteCourses?.Count} UNIT-e Courses");
 
+                    if (_unite != null && _dbContext != null && _netsuite != null && _log != null)
+                    {
+                        var netSuiteLookups = new NetSuiteLookups(_dbContext, _unite, _netsuite, _log);
+                        if (uniteCourses != null && uniteCourses.Count > 0)
+                            uniteCourses = await netSuiteLookups.GetCampusMappings<UNITeCourse>(uniteCourses);
+
+                        //_log?.Information($"First Mapped Location: {uniteCourses?.FirstOrDefault()?.NetSuiteLocationID}");
+                    }
+
                     if (uniteCourses != null)
                         uniteNetSuiteNonInventorySaleItems = ModelMappings.MapUNITeCoursesToNetSuiteNonInventorySaleItems(uniteCourses);
 
@@ -394,8 +420,12 @@ namespace NetSuiteIntegration.Services
                             {
                                 if (updatedNetSuiteNonInventorySaleItem?.RecordActionType == RecordActionType.Insert)
                                 {
+                                    //The NetSuite API does not return the newly inserted object so need to retrieve it again to get the ID
+                                    updatedNetSuiteNonInventorySaleItem = await GetNetSuiteNonInventorySaleItem(saleItem ?? new NetSuiteNonInventorySaleItem()); ;
+                                    updatedNetSuiteNonInventorySaleItem.RecordActionType = RecordActionType.Insert;
+
                                     //Add the ID of the newly inserted record to the UNIT-e record
-                                    saleItem.ID = updatedNetSuiteNonInventorySaleItem?.ID;
+                                    saleItem!.ID = updatedNetSuiteNonInventorySaleItem?.ID;
                                     _log?.Information($"Inserted New NetSuite Non-Inventory Sale Item: {saleItem?.ID}");
                                 }
                                 else if (updatedNetSuiteNonInventorySaleItem?.RecordActionType == RecordActionType.Update)
@@ -467,6 +497,19 @@ namespace NetSuiteIntegration.Services
                 {
                     _log?.Information($"Loaded {uniteFees?.Count} UNIT-e Fees");
 
+                    if (_unite != null && _dbContext != null && _netsuite != null && _log != null)
+                    {
+                        var netSuiteLookups = new NetSuiteLookups(_dbContext, _unite, _netsuite, _log);
+                        if (uniteFees != null && uniteFees.Count > 0)
+                            uniteFees = await netSuiteLookups.GetCampusMappings<UNITeFee>(uniteFees);
+
+                        //_log?.Information($"First Mapped Location: {uniteFees?.FirstOrDefault()?.NetSuiteLocationID}");
+                        if (uniteFees != null && uniteFees.Count > 0)
+                            uniteFees = await netSuiteLookups.GetCountryMappings<UNITeFee>(uniteFees);
+
+                        //_log?.Information($"First Mapped Country: {uniteFees?.FirstOrDefault()?.NetSuiteCountryNameMain}");
+                    }
+
                     //Add Customer ID from related Customer Record to UNITe Fees
                     if (customers != null && customers.Count > 0)
                     {
@@ -509,6 +552,41 @@ namespace NetSuiteIntegration.Services
                             else
                                 _log?.Information($"Invoice Not Found in NetSuite");
 
+                            #endregion
+
+                            #region Perform Updates to NetSuite Invoice
+                            //Update or add the Invoice record in NetSuite
+                            NetSuiteInvoice updatedNetSuiteInvoice = await UpdateNetSuiteInvoice(invoice ?? new NetSuiteInvoice(), readOnly);
+
+                            //Update the ID of the record that came from UNIT-e so it matches the newly inserted record if not updating an existing NetSuite record
+                            if (invoice != null)
+                            {
+                                if (updatedNetSuiteInvoice?.RecordActionType == RecordActionType.Insert)
+                                {
+                                    //The NetSuite API does not return the newly inserted object so need to retrieve it again to get the ID
+                                    updatedNetSuiteInvoice = await GetNetSuiteSQLInvoiceByCustomer(invoice ?? new NetSuiteInvoice());
+                                    updatedNetSuiteInvoice.RecordActionType = RecordActionType.Insert;
+
+                                    //Add the ID of the newly inserted record to the UNIT-e record
+                                    invoice!.ID = updatedNetSuiteInvoice?.ID;
+                                    _log?.Information($"Inserted New NetSuite Invoice: {invoice?.ID}");
+                                }
+                                else if (updatedNetSuiteInvoice?.RecordActionType == RecordActionType.Update)
+                                {
+                                    _log?.Information($"Synced Existing NetSuite Invoice: {invoice?.ID}");
+                                }
+                                else if (readOnly == true)
+                                {
+                                    _log?.Information($"**Read Only Mode**: No Changes Made to NetSuite Invoice: {invoice?.ID}");
+                                }
+                                else
+                                {
+                                    _log?.Information($"No Changes Made to NetSuite Invoice: {invoice?.ID}");
+                                }
+                            }
+                            #endregion
+
+                            #region Check Invoice Lines
                             int? numUniteInvoiceLines = invoice?.Items?.Where(i => i.Amount != null).ToList().Count ?? 0;
 
                             if (matchedInvoice?.ID != null)
@@ -533,38 +611,13 @@ namespace NetSuiteIntegration.Services
 
                             #endregion
 
-                            #region Perform Updates to NetSuite Invoice
-                            //Update or add the Invoice record in NetSuite
-                            NetSuiteInvoice updatedNetSuiteInvoice = await UpdateNetSuiteInvoice(invoice ?? new NetSuiteInvoice(), readOnly);
-
-                            //Update the ID of the record that came from UNIT-e so it matches the newly inserted record if not updating an existing NetSuite record
-                            if (invoice != null)
-                            {
-                                if (updatedNetSuiteInvoice?.RecordActionType == RecordActionType.Insert)
-                                {
-                                    //Add the ID of the newly inserted record to the UNIT-e record
-                                    invoice.ID = updatedNetSuiteInvoice?.ID;
-                                    _log?.Information($"Inserted New NetSuite Invoice: {invoice?.ID}");
-                                }
-                                else if (updatedNetSuiteInvoice?.RecordActionType == RecordActionType.Update)
-                                {
-                                    _log?.Information($"Synced Existing NetSuite Invoice: {invoice?.ID}");
-                                }
-                                else if (readOnly == true)
-                                {
-                                    _log?.Information($"**Read Only Mode**: No Changes Made to NetSuite Invoice: {invoice?.ID}");
-                                }
-                                else
-                                {
-                                    _log?.Information($"No Changes Made to NetSuite Invoice: {invoice?.ID}");
-                                }
-                            }
-                            #endregion
-
+                            #region Update Invoice Lines
                             //Update the invoice lines in NetSuite
                             bool? invoiceLinesUpdated = false;
                             if (invoice != null)
                                 invoiceLinesUpdated = await UpdateNetSuiteInvoiceItems(invoice, readOnly);
+
+                            #endregion
 
                             if (firstRecordOnly == true)
                                 break;
@@ -621,7 +674,20 @@ namespace NetSuiteIntegration.Services
                 {
                     _log?.Information($"Loaded {uniteCreditNotes?.Count} UNIT-e Credit Notes");
 
-                    //Add Customer ID from related Customer Record to UNITe Fees
+                    if (_unite != null && _dbContext != null && _netsuite != null && _log != null)
+                    {
+                        var netSuiteLookups = new NetSuiteLookups(_dbContext, _unite, _netsuite, _log);
+                        if (uniteCreditNotes != null && uniteCreditNotes.Count > 0)
+                            uniteCreditNotes = await netSuiteLookups.GetCampusMappings<UNITeCreditNote>(uniteCreditNotes);
+
+                        //_log?.Information($"First Mapped Location: {uniteCreditNotes?.FirstOrDefault()?.NetSuiteLocationID}");
+                        if (uniteCreditNotes != null && uniteCreditNotes.Count > 0)
+                            uniteCreditNotes = await netSuiteLookups.GetCountryMappings<UNITeCreditNote>(uniteCreditNotes);
+
+                        //_log?.Information($"First Mapped Country: {uniteCreditNotes?.FirstOrDefault()?.NetSuiteCountryNameMain}");
+                    }
+
+                    //Add Customer ID from related Customer Record to UNITe Credit Notes
                     if (customers != null && customers.Count > 0)
                     {
                         foreach (UNITeCreditNote? fee in uniteCreditNotes!)
@@ -662,6 +728,41 @@ namespace NetSuiteIntegration.Services
                             else
                                 _log?.Information($"Credit Note Not Found in NetSuite");
 
+                            #endregion
+
+                            #region Perform Updates to NetSuite Credit Memo
+                            //Update or add the Credit Memo record in NetSuite
+                            NetSuiteCreditMemo updatedNetSuiteCreditMemo = await UpdateNetSuiteCreditMemo(creditMemo ?? new NetSuiteCreditMemo(), readOnly);
+
+                            //Update the ID of the record that came from UNIT-e so it matches the newly inserted record if not updating an existing NetSuite record
+                            if (creditMemo != null)
+                            {
+                                if (updatedNetSuiteCreditMemo?.RecordActionType == RecordActionType.Insert)
+                                {
+                                    //The NetSuite API does not return the newly inserted object so need to retrieve it again to get the ID
+                                    updatedNetSuiteCreditMemo = await GetNetSuiteSQLCreditMemo(creditMemo ?? new NetSuiteCreditMemo());
+                                    updatedNetSuiteCreditMemo.RecordActionType = RecordActionType.Insert;
+
+                                    //Add the ID of the newly inserted record to the UNIT-e record
+                                    creditMemo!.ID = updatedNetSuiteCreditMemo?.ID;
+                                    _log?.Information($"Inserted New NetSuite Credit Memo: {creditMemo?.ID}");
+                                }
+                                else if (updatedNetSuiteCreditMemo?.RecordActionType == RecordActionType.Update)
+                                {
+                                    _log?.Information($"Synced Existing NetSuite Credit Memo: {creditMemo?.ID}");
+                                }
+                                else if (readOnly == true)
+                                {
+                                    _log?.Information($"**Read Only Mode**: No Changes Made to NetSuite Credit Memo: {creditMemo?.ID}");
+                                }
+                                else
+                                {
+                                    _log?.Information($"No Changes Made to NetSuite Credit Memo: {creditMemo?.ID}");
+                                }
+                            }
+                            #endregion
+
+                            #region Check Credit Memo Lines
                             int? numUniteCreditMemoLines = creditMemo?.Items?.Where(i => i.Amount != null).ToList().Count ?? 0;
 
                             if (matchedCreditMemo?.ID != null)
@@ -686,38 +787,14 @@ namespace NetSuiteIntegration.Services
 
                             #endregion
 
-                            #region Perform Updates to NetSuite Credit Memo
-                            //Update or add the Credit Memo record in NetSuite
-                            NetSuiteCreditMemo updatedNetSuiteCreditMemo = await UpdateNetSuiteCreditMemo(creditMemo ?? new NetSuiteCreditMemo(), readOnly);
-
-                            //Update the ID of the record that came from UNIT-e so it matches the newly inserted record if not updating an existing NetSuite record
-                            if (creditMemo != null)
-                            {
-                                if (updatedNetSuiteCreditMemo?.RecordActionType == RecordActionType.Insert)
-                                {
-                                    //Add the ID of the newly inserted record to the UNIT-e record
-                                    creditMemo.ID = updatedNetSuiteCreditMemo?.ID;
-                                    _log?.Information($"Inserted New NetSuite Credit Memo: {creditMemo?.ID}");
-                                }
-                                else if (updatedNetSuiteCreditMemo?.RecordActionType == RecordActionType.Update)
-                                {
-                                    _log?.Information($"Synced Existing NetSuite Credit Memo: {creditMemo?.ID}");
-                                }
-                                else if (readOnly == true)
-                                {
-                                    _log?.Information($"**Read Only Mode**: No Changes Made to NetSuite Credit Memo: {creditMemo?.ID}");
-                                }
-                                else
-                                {
-                                    _log?.Information($"No Changes Made to NetSuite Credit Memo: {creditMemo?.ID}");
-                                }
-                            }
-                            #endregion
+                            #region Update Credit Memo Lines
 
                             //Update the credit memo in NetSuite
                             bool? creditMemoLinesUpdated = false;
                             if (creditMemo != null)
                                 creditMemoLinesUpdated = await UpdateNetSuiteCreditMemoItems(creditMemo, readOnly);
+
+                            #endregion
 
                             if (firstRecordOnly == true)
                                 break;
@@ -773,6 +850,19 @@ namespace NetSuiteIntegration.Services
                 else
                 {
                     _log?.Information($"Loaded {uniteRefunds?.Count} UNIT-e Refunds");
+
+                    if (_unite != null && _dbContext != null && _netsuite != null && _log != null)
+                    {
+                        var netSuiteLookups = new NetSuiteLookups(_dbContext, _unite, _netsuite, _log);
+                        if (uniteRefunds != null && uniteRefunds.Count > 0)
+                            uniteRefunds = await netSuiteLookups.GetCampusMappings<UNITeRefund>(uniteRefunds);
+
+                        //_log?.Information($"First Mapped Location: {uniteRefunds?.FirstOrDefault()?.NetSuiteLocationID}");
+                        if (uniteRefunds != null && uniteRefunds.Count > 0)
+                            uniteRefunds = await netSuiteLookups.GetCountryMappings<UNITeRefund>(uniteRefunds);
+
+                        //_log?.Information($"First Mapped Country: {uniteRefunds?.FirstOrDefault()?.NetSuiteCountryNameMain}");
+                    }
 
                     //Add Customer ID from related Customer Record to UNITe Fees
                     if (customers != null && customers.Count > 0)
@@ -832,8 +922,12 @@ namespace NetSuiteIntegration.Services
                             {
                                 if (updatedNetSuiteCustomerRefund?.RecordActionType == RecordActionType.Insert)
                                 {
+                                    //The NetSuite API does not return the newly inserted object so need to retrieve it again to get the ID
+                                    updatedNetSuiteCustomerRefund = await GetNetSuiteSQLCustomerRefund(refund ?? new NetSuiteCustomerRefund());
+                                    updatedNetSuiteCustomerRefund.RecordActionType = RecordActionType.Insert;
+
                                     //Add the ID of the newly inserted record to the UNIT-e record
-                                    refund.ID = updatedNetSuiteCustomerRefund?.ID;
+                                    refund!.ID = updatedNetSuiteCustomerRefund?.ID;
                                     _log?.Information($"Inserted New NetSuite Customer Refund: {refund?.ID}");
                                 }
                                 else if (updatedNetSuiteCustomerRefund?.RecordActionType == RecordActionType.Update)
