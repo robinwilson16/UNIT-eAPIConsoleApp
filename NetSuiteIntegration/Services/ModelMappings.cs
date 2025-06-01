@@ -106,7 +106,7 @@ namespace NetSuiteIntegration.Services
                         cus.PostCodeMain != null ? new NetSuiteAddressBook {
                             DefaultBilling = true,
                             DefaultShipping = true,
-                            InternalID = int.Parse(Math.Round(cus.AddressIDMain ?? 0).ToString()?.Substring(cus?.AddressIDMain?.ToString()?.Length - 8 ?? 1) ?? "0"),
+                            //InternalID = int.Parse(Math.Round(cus.AddressIDMain ?? 0).ToString()?.Substring(cus?.AddressIDMain?.ToString()?.Length - 8 ?? 1) ?? "0"),
                             IsResidential = true,
                             Label = cus.AddressMainType,
                             AddressBookAddress = new NetSuiteAddress
@@ -123,12 +123,12 @@ namespace NetSuiteIntegration.Services
                                 Zip = cus.PostCodeMain
                             },
                             AddressBookAddressText = cus.AddressMainEncoded
-                        } : null,
+                        } : new NetSuiteAddressBook(),
                         cus.PostCodeTermTime != null && cus.AddressIDTermTime != cus.AddressIDMain ? new NetSuiteAddressBook
                         {
                             DefaultBilling = false,
                             DefaultShipping = false,
-                            InternalID = int.Parse(Math.Round(cus.AddressIDTermTime ?? 0).ToString()?.Substring(cus?.AddressIDTermTime?.ToString()?.Length - 8 ?? 1) ?? "0"),
+                            //InternalID = int.Parse(Math.Round(cus.AddressIDTermTime ?? 0).ToString()?.Substring(cus?.AddressIDTermTime?.ToString()?.Length - 8 ?? 1) ?? "0"),
                             IsResidential = false,
                             Label = "Term Time",
                             AddressBookAddress = new NetSuiteAddress
@@ -145,12 +145,12 @@ namespace NetSuiteIntegration.Services
                                 Zip = cus.PostCodeTermTime
                             },
                             AddressBookAddressText = cus.AddressTermTimeEncoded
-                        } : null,
+                        } : new NetSuiteAddressBook(),
                         cus.PostCodeHome != null && cus.AddressIDHome != cus.AddressIDMain ? new NetSuiteAddressBook
                         {
                             DefaultBilling = false,
                             DefaultShipping = false,
-                            InternalID = int.Parse(Math.Round(cus.AddressIDHome ?? 0).ToString()?.Substring(cus?.AddressIDHome?.ToString()?.Length - 8 ?? 1) ?? "0"),
+                            //InternalID = int.Parse(Math.Round(cus.AddressIDHome ?? 0).ToString()?.Substring(cus?.AddressIDHome?.ToString()?.Length - 8 ?? 1) ?? "0"),
                             IsResidential = false,
                             Label = "Home",
                             AddressBookAddress = new NetSuiteAddress
@@ -167,12 +167,12 @@ namespace NetSuiteIntegration.Services
                                 Zip = cus.PostCodeHome
                             },
                             AddressBookAddressText = cus.AddressHomeEncoded
-                        } : null,
+                        } : new NetSuiteAddressBook(),
                         cus.PostCodeInvoice != null && cus.AddressIDInvoice != cus.AddressIDMain ? new NetSuiteAddressBook
                         {
                             DefaultBilling = false,
                             DefaultShipping = false,
-                            InternalID = int.Parse(Math.Round(cus.AddressIDInvoice ?? 0).ToString()?.Substring(cus?.AddressIDInvoice?.ToString()?.Length - 8 ?? 1) ?? "0"),
+                            //InternalID = int.Parse(Math.Round(cus.AddressIDInvoice ?? 0).ToString()?.Substring(cus?.AddressIDInvoice?.ToString()?.Length - 8 ?? 1) ?? "0"),
                             IsResidential = false,
                             Label = "Invoice",
                             AddressBookAddress = new NetSuiteAddress
@@ -189,8 +189,8 @@ namespace NetSuiteIntegration.Services
                                 Zip = cus.PostCodeInvoice
                             },
                             AddressBookAddressText = cus.AddressInvoiceEncoded
-                        } : null
-                    }.Where(ab => ab != null).ToList()
+                        } : new NetSuiteAddressBook()
+                    }.Where(ab => ab != null && ab.Label != null).ToList()
                 },
                 AlcoholRecipientType = new NetSuiteCustomerAlcoholRecipientType
                 {
@@ -303,10 +303,6 @@ namespace NetSuiteIntegration.Services
             //Map UNIT-e Courses to NetSuite Non-Inventory Sale Items
             netSuiteNonInventorySaleItems = uniteCourses?.Select(crs => new NetSuiteNonInventorySaleItem
             {
-                Class = new NetSuiteNonInventorySaleItemClass
-                {
-                    ID = crs.NetSuiteSubsiduaryID
-                },
                 CreatedDate = DateTime.Now,
                 CustItem1 = crs.StartDateCourse?.Format("yyyy-MM-dd"),
                 CustItem2 = crs.EndDateCourse?.Format("yyyy-MM-dd"),
@@ -358,6 +354,10 @@ namespace NetSuiteIntegration.Services
                     RefName = "BIMM - Straight Line, Exact Days"
                 },
                 SalesDescription = crs.CourseTitle,
+                TaxSchedule = new NetSuiteNonInventorySaleItemTaxSchedule
+                {//Is ignored unless SuiteTax is enabled in Setup. Is Mandatory too if Advanced Taxation is enabled
+                    ID = "1"
+                },
                 UseMarginalRates = false,
                 VSOEDelivered = false,
                 VSOESopGroup = new NetSuiteNonInventorySaleItemVSOESopGroup
@@ -396,15 +396,11 @@ namespace NetSuiteIntegration.Services
                 },
                 AsOfDate = inv.StartDateEnrol?.Format("yyyy-MM-dd"),
                 BillAddress = inv.AddressMainEncoded,
-                BillAddressList = new NetSuiteInvoiceBillAddressList
-                {
-                    RefName = inv.AddressMainType
-                },
                 BillingAddressText = inv.AddressMainEncoded,
                 CanHaveStackable = false,
                 Class = new NetSuiteInvoiceClass
                 {
-                    RefName = $"{inv.SubjectName}: {inv.NetSuiteLocationName}"
+                    ID = inv.NetSuiteFacultyID
                 },
                 CreatedDate = DateTime.Now,
                 Currency = new NetSuiteInvoiceCurrency
@@ -472,28 +468,55 @@ namespace NetSuiteIntegration.Services
                 ExchangeRate = 1.0,
                 ExcludeFromGLNumbering = false,
                 ExternalID = $"ENR_{inv.EnrolmentID.ToString()}",
+                Item = new NetSuiteInvoiceItem
+                {
+                    Items = new List<NetSuiteInvoiceItemItem>
+                    {
+                        new NetSuiteInvoiceItemItem
+                        {
+                            Amount = decimal.ToDouble(inv.FeeGross ?? 0),
+                            Class = new NetSuiteInvoiceItemItemClass
+                            {
+                                ID = inv.NetSuiteFacultyID
+                            },
+                            Custitem1 = inv.StartDateEnrol?.Format("yyyy-MM-dd"),
+                            Custitem2 = inv.ExpectedEndDateEnrol?.Format("yyyy-MM-dd"),
+                            Item = new NetSuiteInvoiceItemItemItem
+                            {
+                                ID = "5103"
+                                //ID = inv.NetSuiteNonInventorySaleItemID //Ensure NetSuite Course ID has been assigned to the UNIT-e Instance
+                            },
+                            Location = new NetSuiteInvoiceItemItemLocation
+                            {
+                                ID = inv.NetSuiteLocationID
+                            },
+                            Subsidiary = new NetSuiteInvoiceItemItemSubsidiary
+                            {
+                                ID = inv.NetSuiteSubsiduaryID
+                            },
+                            Terms = new NetSuiteInvoiceItemItemTerms
+                            {
+                                ID = "1"
+                            }
+                        }
+                    }
+                },
                 Location = new NetSuiteInvoiceLocation
                 {
                     ID = inv.NetSuiteLocationID
                 },
                 Memo = $"{(inv.AcademicYearName?.Length == 9? inv.AcademicYearName?.Substring(2, 2) : inv.AcademicYearName)}/{(inv.AcademicYearName?.Length == 9 ? inv.AcademicYearName?.Substring(7, 2) : inv.AcademicYearName)} INVOICE",
-                NextApprover = new NetSuiteInvoiceNextApprover
-                {
-                    ID = "-1",
-                    RefName = ""
-                },
                 Originator = "UNIT-e",
-                PostingPeriod = new NetSuiteInvoicePostingPeriod
-                {
-                    RefName = inv.StartDateEnrol?.Format("MMM yyyy"),
-                },
+                OverrideInstallments = false,
+                //PostingPeriod = new NetSuiteInvoicePostingPeriod
+                //{
+                //    //RefName is not being accepted even though it references a valid posting period in NetSuite
+                //    ID = "188"
+                //    //RefName = inv.AcademicYearStartDate?.Format("MMM yyyy"),
+                //},
                 PrevDate = inv.StartDateEnrol?.Format("yyyy-MM-dd"),
                 SalesEffectiveDate = inv.StartDateEnrol?.Format("yyyy-MM-dd"),
                 ShipAddress = inv.AddressMainEncoded,
-                ShipAddressList = new NetSuiteInvoiceShipAddressList
-                {
-                    RefName = inv.AddressMainType
-                },
                 ShipIsResidential = true,
                 ShipOverride = false,
                 ShippingAddressText = inv.AddressMainEncoded,
@@ -526,7 +549,7 @@ namespace NetSuiteIntegration.Services
                         Amount = decimal.ToDouble(inv.FeeGross ?? 0),
                         Class = new NetSuiteInvoiceItemDetailClass
                         {
-                            RefName = $"{inv.SubjectName}: {inv.NetSuiteLocationName}"
+                            ID = inv.NetSuiteFacultyID
                         },
                         CostEstimate = 0,
                         CostEstimateRate = 0,
@@ -582,7 +605,7 @@ namespace NetSuiteIntegration.Services
                         Amount = decimal.ToDouble(inv.FeeDiscount ?? 0),
                         Class = new NetSuiteInvoiceItemDetailClass
                         {
-                            RefName = $"{inv.SubjectName}: {inv.NetSuiteLocationName}"
+                            ID = inv.NetSuiteFacultyID
                         },
                         CostEstimate = 0,
                         CostEstimateRate = 0,
@@ -636,7 +659,7 @@ namespace NetSuiteIntegration.Services
                         Rate = decimal.ToDouble(inv.FeeDiscount ?? 0),
                         IsMainInvoiceLine = false
                     } : new NetSuiteInvoiceItemDetail()
-                },
+                }.Where(itm => itm != null && itm.Amount != null).ToList(),
                 UNITeStudentID = inv.StudentID,
                 UNITeEnrolmentID = inv.EnrolmentID
             }).ToList<NetSuiteInvoice>();
@@ -670,7 +693,7 @@ namespace NetSuiteIntegration.Services
                 CanHaveStackable = false,
                 Class = new NetSuiteCreditMemoClass
                 {
-                    RefName = $"{cre.SubjectName}: {cre.NetSuiteLocationName}"
+                    ID = cre.NetSuiteFacultyID
                 },
                 CreatedDate = DateTime.Now,
                 Currency = new NetSuiteCreditMemoCurrency

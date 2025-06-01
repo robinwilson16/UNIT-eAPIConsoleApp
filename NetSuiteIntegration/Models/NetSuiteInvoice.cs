@@ -85,7 +85,9 @@ namespace NetSuiteIntegration.Models
         [Key]
         public string? ID { get; set; }
         public NetSuiteInvoiceInstallment? Installment { get; set; }
+        //public ICollection<NetSuiteInvoiceItemDetail>? Item { get; set; }
         public NetSuiteInvoiceItem? Item { get; set; }
+        //public NetSuiteInvoiceItemDetail? Item { get; set; }
         public NetSuiteInvoiceItemCost? ItemCost { get; set; }
         public DateTime? LastModifiedDate { get; set; }
         public NetSuiteInvoiceLocation? Location { get; set; }

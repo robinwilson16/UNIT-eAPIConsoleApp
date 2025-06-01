@@ -132,7 +132,7 @@ namespace NetSuiteIntegration.Models
         [JsonIgnore]
         public RecordActionType? RecordActionType { get; set; }
         [JsonIgnore]
-        public ICollection<NetSuiteAddressBook>? Addresses { get; set; }
+        public ICollection<NetSuiteAddressBook>? Addresses { get; set; } //Redundant now but need to amend address update logic before removing
         [JsonIgnore]
         [Column(TypeName = "decimal(16,0)")]
         public decimal? UNITeStudentID { get; set; }

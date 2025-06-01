@@ -133,17 +133,18 @@ namespace NetSuiteIntegration.Services
 
             //Process the data
             ICollection<NetSuiteCustomer>? uniteNetSuiteCustomers = await ProcessEnrolments(enrolmentRepGen, readOnly, firstRecordOnly, forceInsertCustomer);
-            ICollection<NetSuiteNonInventorySaleItem>? uniteNetSuiteNonInventorySaleItems = await ProcessCourses(courseRepGen, readOnly, firstRecordOnly, forceInsertCustomer);
+            //Disabled for now until Tax Schedule can be included
+            //ICollection<NetSuiteNonInventorySaleItem>? uniteNetSuiteNonInventorySaleItems = await ProcessCourses(courseRepGen, readOnly, firstRecordOnly, forceInsertCustomer);
 
             //If empty lists are returned then there has been an error as there should always be students and courses in scope
             if (uniteNetSuiteCustomers == null || uniteNetSuiteCustomers.Count == 0)
             {
                 studentOK = false;
             }
-            if (uniteNetSuiteNonInventorySaleItems == null || uniteNetSuiteNonInventorySaleItems.Count == 0)
-            {
-                courseOK = false;
-            }
+            //if (uniteNetSuiteNonInventorySaleItems == null || uniteNetSuiteNonInventorySaleItems.Count == 0)
+            //{
+            //    courseOK = false;
+            //}
 
             //As long as students has items then process the fees, credit notes and refunds
             studentOK = studentOK == true ? await ProcessFees(uniteNetSuiteCustomers, feeRepGen, readOnly, firstRecordOnly, forceInsertCustomer) : studentOK;

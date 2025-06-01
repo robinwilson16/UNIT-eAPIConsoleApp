@@ -48,6 +48,7 @@ namespace NetSuiteIntegration.Models
         public NetSuiteNonInventorySaleItemRevRecForecastRule? RevRecForecastRule { get; set; }
         public string? SalesDescription { get; set; }
         public NetSuiteNonInventorySaleItemSubsidiary? Subsidiary { get; set; }
+        public NetSuiteNonInventorySaleItemTaxSchedule? TaxSchedule { get; set; }
         public NetSuiteNonInventorySaleItemTranslations? Translations { get; set; }
         public bool? UseMarginalRates { get; set; }
         public bool? VSOEDelivered { get; set; }

@@ -8,9 +8,9 @@ using Microsoft.EntityFrameworkCore;
 namespace NetSuiteIntegration.Models
 {
     [Keyless]
-    public class NetSuiteInvoiceItem
+    public class NetSuiteInvoiceLineItem
     {
-        public ICollection<NetSuiteLink>? Links { get; set; }
-        public ICollection<NetSuiteInvoiceItemItem>? Items { get; set; }
+        public int? Line { get; set; }
+        public NetSuiteInvoiceItemDetail? Entity { get; set; }
     }
 }

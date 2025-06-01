@@ -21,6 +21,7 @@ namespace NetSuiteIntegration.Models
         public bool? DefaultShipping { get; set; }
         [Key]
         public int? ID { get; set; }
+        [JsonIgnore]
         public int? InternalID { get; set; }
         public bool? IsResidential { get; set; }
         public string? Label { get; set; }
