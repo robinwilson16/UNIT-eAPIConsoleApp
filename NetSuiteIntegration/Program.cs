@@ -133,8 +133,8 @@ namespace NetSuiteIntegration
             log.Information("Start");
 
             //Run main process
-            await process!.Process(UNITeRepGens, ReadOnly, FirstRecordOnly, ForceInsertCustomer);
-
+            //await process!.Process(UNITeRepGens, ReadOnly, FirstRecordOnly, ForceInsertCustomer);
+            await process!.Testing();
 
             #endregion
 

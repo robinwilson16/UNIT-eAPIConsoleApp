@@ -8,11 +8,9 @@ using Microsoft.EntityFrameworkCore;
 namespace NetSuiteIntegration.Models
 {
     [Keyless]
-    public class NetSuiteCustomerRefundSubsidiary
+    public class NetSuiteInvoiceItemItemSubsidiaryItem
     {
-        public ICollection<NetSuiteLink>? Links { get; set; }
         public string? ID { get; set; }
         public string? RefName { get; set; }
-        public ICollection<NetSuiteCustomerRefundSubsidiaryItem>? Items { get; set; }
     }
 }

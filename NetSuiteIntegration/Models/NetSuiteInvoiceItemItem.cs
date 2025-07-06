@@ -13,8 +13,8 @@ namespace NetSuiteIntegration.Models
         public ICollection<NetSuiteLink>? Links { get; set; }
         public double? Amount { get; set; }
         public NetSuiteInvoiceItemItemClass? Class { get; set; }
-        public string? CustItem1 { get; set; }
-        public string? CustItem2 { get; set; }
+        public string? CustCol1 { get; set; }
+        public string? CustCol2 { get; set; }
         public NetSuiteInvoiceItemItemItem? Item { get; set; }
         public NetSuiteInvoiceItemItemLocation? Location { get; set; }
         public NetSuiteInvoiceItemItemSubsidiary? Subsidiary { get; set; }

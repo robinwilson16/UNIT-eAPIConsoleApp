@@ -40,7 +40,7 @@ namespace NetSuiteIntegration.Models
         public bool? IsInactive { get; set; }
         public bool? IsOnline { get; set; }
         public string? ItemID { get; set; }
-        public NetSuiteNonInventorySaleItemItemType? ItemType { get; set; }
+        //public NetSuiteNonInventorySaleItemItemType? ItemType { get; set; }
         public DateTime? LastModifiedDate { get; set; }
         public NetSuiteNonInventorySaleItemLocation? Location { get; set; }
         public NetSuiteNonInventorySaleItemPrice? Price { get; set; }

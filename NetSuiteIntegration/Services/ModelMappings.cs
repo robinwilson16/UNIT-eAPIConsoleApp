@@ -205,20 +205,19 @@ namespace NetSuiteIntegration.Services
                 },
                 Currency = new NetSuiteCustomerCurrency
                 {
-                    ID = "1",
-                    RefName = 
-                        cus.NetSuiteLocationName == "Berlin" ? "EUR" :
-                        cus.NetSuiteLocationName == "Dublin" ? "EUR" :
-                        "GBP"
+                    ID =
+                        cus.NetSuiteLocationName == "Berlin" ? "4" : //EUR
+                        cus.NetSuiteLocationName == "Dublin" ? "4" : //EUR
+                        "1" //GBP
                 },
                 CustEntity2663CustomerRefund = false,
                 CustEntity2663DirectDebit = false,
                 CustEntityCRMApplicantID = cus.ERPID,
                 CustEntityEscLastModifiedDate = DateTime.Now.Format("yyyy-MM-dd"),
-                CustEntityF3Campus = new NetSuiteCustomerCustEntityF3Campus
-                {
-                    ID = cus.NetSuiteLocationID
-                },
+                //CustEntityF3Campus = new NetSuiteCustomerCustEntityF3Campus
+                //{
+                //    ID = cus.NetSuiteLocationID
+                //}, //List issue so commenting out until Finance fix or provide a new list
                 CustEntityF3StudentStatus = new NetSuiteCustomerCustEntityF3StudentStatus
                 {
                     RefName = cus.EnrolmentStatusName
@@ -354,6 +353,16 @@ namespace NetSuiteIntegration.Services
                     RefName = "BIMM - Straight Line, Exact Days"
                 },
                 SalesDescription = crs.CourseTitle,
+                Subsidiary = new NetSuiteNonInventorySaleItemSubsidiary
+                {
+                    Items = new List<NetSuiteNonInventorySaleItemSubsidiaryItem>
+                    {
+                        new NetSuiteNonInventorySaleItemSubsidiaryItem
+                        {
+                            ID = crs.NetSuiteSubsiduaryID
+                        }
+                    }
+                },
                 TaxSchedule = new NetSuiteNonInventorySaleItemTaxSchedule
                 {//Is ignored unless SuiteTax is enabled in Setup. Is Mandatory too if Advanced Taxation is enabled
                     ID = "1"
@@ -391,8 +400,8 @@ namespace NetSuiteIntegration.Services
                 AmountRemainingTotalBox = decimal.ToDouble(inv.FeeGross ?? 0),
                 ApprovalStatus = new NetSuiteInvoiceApprovalStatus
                 {
-                    ID = "2",
-                    RefName = "Approved"
+                    ID = "1",
+                    RefName = "Pending Approval"
                 },
                 AsOfDate = inv.StartDateEnrol?.Format("yyyy-MM-dd"),
                 BillAddress = inv.AddressMainEncoded,
@@ -405,11 +414,10 @@ namespace NetSuiteIntegration.Services
                 CreatedDate = DateTime.Now,
                 Currency = new NetSuiteInvoiceCurrency
                 {
-                    ID = "1",
-                    RefName =
-                        inv.NetSuiteLocationName == "Berlin" ? "EUR" :
-                        inv.NetSuiteLocationName == "Dublin" ? "EUR" :
-                        "GBP"
+                    ID =
+                        inv.NetSuiteLocationName == "Berlin" ? "4" : //EUR
+                        inv.NetSuiteLocationName == "Dublin" ? "4" : //EUR
+                        "1" //GBP
                 },
                 Custbody15699ExcludeFromEPProcess = false,
                 CustbodyAtlasExistCustHdn = new NetSuiteInvoiceCustbodyAtlasExistCustHdn
@@ -463,9 +471,9 @@ namespace NetSuiteIntegration.Services
                 {
                     ID = inv.NetSuiteCustomerID //Ensure NetSuite Customer ID has been assigned to the UNIT-e Instance
                 },
-                EstGrossProfit = decimal.ToDouble(inv.FeeGross ?? 0),
-                EstGrossProfitPercent = 100.0,
-                ExchangeRate = 1.0,
+                //EstGrossProfit = decimal.ToDouble(inv.FeeGross ?? 0),
+                //EstGrossProfitPercent = 100.0,
+                //ExchangeRate = 1.0,
                 ExcludeFromGLNumbering = false,
                 ExternalID = $"ENR_{inv.EnrolmentID.ToString()}",
                 Item = new NetSuiteInvoiceItem
@@ -479,12 +487,12 @@ namespace NetSuiteIntegration.Services
                             {
                                 ID = inv.NetSuiteFacultyID
                             },
-                            Custitem1 = inv.StartDateEnrol?.Format("yyyy-MM-dd"),
-                            Custitem2 = inv.ExpectedEndDateEnrol?.Format("yyyy-MM-dd"),
+                            CustCol1 = inv.StartDateEnrol?.Format("yyyy-MM-dd"),
+                            CustCol2 = inv.ExpectedEndDateEnrol?.Format("yyyy-MM-dd"),
                             Item = new NetSuiteInvoiceItemItemItem
                             {
-                                ID = "5103"
-                                //ID = inv.NetSuiteNonInventorySaleItemID //Ensure NetSuite Course ID has been assigned to the UNIT-e Instance
+                                //ID = "5103"
+                                ID = inv.NetSuiteNonInventorySaleItemID //Ensure NetSuite Course ID has been assigned to the UNIT-e Instance
                             },
                             Location = new NetSuiteInvoiceItemItemLocation
                             {
@@ -698,11 +706,10 @@ namespace NetSuiteIntegration.Services
                 CreatedDate = DateTime.Now,
                 Currency = new NetSuiteCreditMemoCurrency
                 {
-                    ID = "1",
-                    RefName =
-                        cre.NetSuiteLocationName == "Berlin" ? "EUR" :
-                        cre.NetSuiteLocationName == "Dublin" ? "EUR" :
-                        "GBP"
+                    ID =
+                        cre.NetSuiteLocationName == "Berlin" ? "4" : //EUR
+                        cre.NetSuiteLocationName == "Dublin" ? "4" : //EUR
+                        "1" //GBP
                 },
                 Custbody15699ExcludeFromEPProcess = false,
                 CustbodyAtlasExistCustHdn = new NetSuiteCreditMemoCustbodyAtlasExistCustHdn
@@ -904,11 +911,10 @@ namespace NetSuiteIntegration.Services
                 CreatedDate = DateTime.Now,
                 Currency = new NetSuiteCustomerRefundCurrency
                 {
-                    ID = "1",
-                    RefName =
-                        re.NetSuiteLocationName == "Berlin" ? "EUR" :
-                        re.NetSuiteLocationName == "Dublin" ? "EUR" :
-                        "GBP"
+                    ID =
+                        re.NetSuiteLocationName == "Berlin" ? "4" : //EUR
+                        re.NetSuiteLocationName == "Dublin" ? "4" : //EUR
+                        "1" //GBP
                 },
                 Custbody9997AutocashAssertionField = false,
                 Custbody9997IsForEpDd = false,
@@ -957,7 +963,14 @@ namespace NetSuiteIntegration.Services
                 PrevDate = re.ActualEndDateEnrol?.Format("yyyy-MM-dd"),
                 Subsidiary = new NetSuiteCustomerRefundSubsidiary
                 {
-                    ID = re.NetSuiteSubsiduaryID
+                    //ID = re.NetSuiteSubsiduaryID
+                    Items = new List<NetSuiteCustomerRefundSubsidiaryItem>
+                    {
+                        new NetSuiteCustomerRefundSubsidiaryItem
+                        {
+                            ID = re.NetSuiteSubsiduaryID
+                        }
+                    }
                 },
                 ToBePrinted = false,
                 Total = decimal.ToDouble(re.FeeGross ?? 0),
@@ -969,6 +982,102 @@ namespace NetSuiteIntegration.Services
             }).ToList<NetSuiteCustomerRefund>();
 
             return netSuiteCustomerRefunds ?? new List<NetSuiteCustomerRefund>();
+        }
+
+        public static ICollection<NetSuiteCustomerPayment> MapNetSuiteCustomersToNetSuiteCustomerPayments(ICollection<NetSuiteCustomer> netSuiteCustomers)
+        {
+            ICollection<NetSuiteCustomerPayment>? netSuiteCustomerPayments = new List<NetSuiteCustomerPayment>();
+
+            //Map UNIT-e Students to NetSuite Customer Payments
+            netSuiteCustomerPayments = netSuiteCustomers?.Select(cus => new NetSuiteCustomerPayment
+            {
+                Account = new NetSuiteCustomerPaymentAccount
+                {
+                    ID = "532",
+                    RefName = "20134 Total Bank and Cash in Hand : Lloyds Bank ending 0909_MET FILM SCHOOL LTD / GBP"
+                },
+                Applied = 9999.0,
+                Aracct = new NetSuiteCustomerPaymentAracct
+                {
+                    ID = "456",
+                    RefName = "20709 Debtors Control Account"
+                },
+                Balance = 0.0,
+                Cleared = false,
+                ClearedDate = null,
+                CreatedDate = DateTime.Now,
+                Currency = new NetSuiteCustomerPaymentCurrency
+                {
+                    ID = cus?.Currency?.ID
+                },
+                Custbody9997AutocashAssertionField = true,
+                Custbody9997IsForEpDd = false,
+                CustbodyAtlasNoHdn = new NetSuiteCustomerPaymentCustbodyAtlasNoHdn
+                {
+                    ID = "2",
+                    RefName = "No"
+                },
+                CustbodyAtlasYesHdn = new NetSuiteCustomerPaymentCustbodyAtlasYesHdn
+                {
+                    ID = "1",
+                    RefName = "Yes"
+                },
+                CustbodyAznCurrentUser = new NetSuiteCustomerPaymentCustbodyAznCurrentUser
+                {
+                    ID = "90",
+                    RefName = "Malcolm Weller"
+                },
+                CustbodyExternalId = $"STU_{cus?.ID?.ToString()}",
+                Customer = new NetSuiteCustomerPaymentCustomer
+                {
+                    ID = cus?.ID
+                },
+                CustomForm = new NetSuiteCustomerPaymentCustomForm
+                {
+                    ID = "253",
+                    RefName = "MetFilm - Customer Payment"
+                },
+                ExchangeRate = 1.0,
+                ExcludeFromGLNumbering = false,
+                ExternalId = $"PAY_{cus.ID.ToString()}",
+                //ID = $"PAY_{cus.StudentID.ToString()}",
+                Memo = $"{(cus.FirstName?.Length >= 1 ? cus.FirstName?.Substring(0, 1) : cus.FirstName)?.ToUpper()} {cus.LastName?.ToUpper()} {DateTime.Now.Format("ddMMyy HH:mm")}, {cus.FirstName?.ToUpper()} {cus.LastName?.ToUpper()}",
+                Payment = 9999.0,
+                Pending = 0.0,
+                PostingPeriod = new NetSuiteCustomerPaymentPostingPeriod
+                {
+                    RefName = DateTime.Now.Format("MMM yyyy"),
+                },
+                PrevDate = DateTime.Now.Format("yyyy-MM-dd"),
+                Status = new NetSuiteCustomerPaymentStatus
+                {
+                    ID = "Deposited",
+                    RefName = "Deposited"
+                },
+                Subsidiary = new NetSuiteCustomerPaymentSubsidiary
+                {
+                    //ID = cus.NetSuiteSubsiduaryID
+                    Items = new List<NetSuiteCustomerPaymentSubsidiaryItem>
+                    {
+                        new NetSuiteCustomerPaymentSubsidiaryItem
+                        {
+                            ID = cus.Subsidiary?.ID,
+                        }
+                    }
+                },
+                ToBeEmailed = false,
+                Total = 9999.0,
+                TranDate = DateTime.Now.Format("yyyy-MM-dd"),
+                //TranId = $"PAY_{cus.StudentID.ToString()}",
+                Unapplied = 0.0,
+                UndepFunds = new NetSuiteCustomerPaymentUndepFunds
+                {
+                    ID = false,
+                    RefName = "Account"
+                },
+            }).ToList<NetSuiteCustomerPayment>();
+
+            return netSuiteCustomerPayments ?? new List<NetSuiteCustomerPayment>();
         }
     }
 }

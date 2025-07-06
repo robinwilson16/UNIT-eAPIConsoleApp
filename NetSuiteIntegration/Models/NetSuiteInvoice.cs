@@ -76,9 +76,9 @@ namespace NetSuiteIntegration.Models
         public string? DueDate { get; set; }
         public string? Email { get; set; }
         public NetSuiteInvoiceEntity? Entity { get; set; }
-        public double? EstGrossProfit { get; set; }
-        public double? EstGrossProfitPercent { get; set; }
-        public double? ExchangeRate { get; set; }
+        //public double? EstGrossProfit { get; set; }
+        //public double? EstGrossProfitPercent { get; set; }
+        //public double? ExchangeRate { get; set; }
         public bool? ExcludeFromGLNumbering { get; set; }
         public NetSuiteInvoiceExpCost? ExpCost { get; set; }
         public string? ExternalID { get; set; }

@@ -81,8 +81,39 @@ namespace NetSuiteIntegration.Services
 
             if (_netsuite != null)
             {
-                existingNetSuiteCustomer = await _netsuite.Get<NetSuiteCustomer>("customer", 5753);
-                _log?.Information($"\nNetSuite Customer: {existingNetSuiteCustomer?.EntityID} - {existingNetSuiteCustomer?.FirstName} {existingNetSuiteCustomer?.LastName}");
+                existingNetSuiteCustomer = await _netsuite.Get<NetSuiteCustomer>("customer", 88547);
+                _log?.Information($"\nNetSuite Customer: {existingNetSuiteCustomer?.EntityID} - {existingNetSuiteCustomer?.FirstName} {existingNetSuiteCustomer?.LastName} - Subsiduary: {existingNetSuiteCustomer?.Subsidiary?.ID}");
+            }
+
+            ICollection<NetSuiteCustomer>? netSuiteCustomers = new List<NetSuiteCustomer>();
+            netSuiteCustomers.Add(existingNetSuiteCustomer ?? new NetSuiteCustomer());
+
+            ICollection<NetSuiteCustomerPayment>? netSuiteCustomerPayments = new List<NetSuiteCustomerPayment>();
+
+            if (netSuiteCustomers != null)
+                netSuiteCustomerPayments = ModelMappings.MapNetSuiteCustomersToNetSuiteCustomerPayments(netSuiteCustomers);
+
+            _log?.Information($"\nCustomer from mapped data is {netSuiteCustomerPayments.FirstOrDefault()?.Customer?.ID}");
+
+            if (netSuiteCustomerPayments != null && netSuiteCustomerPayments.Count > 0)
+            {
+                _log?.Information($"Found {netSuiteCustomerPayments.Count} NetSuite Customer Payments");
+                foreach (NetSuiteCustomerPayment? payment in netSuiteCustomerPayments)
+                {
+                    _log?.Information($"Payment ID: {payment?.ID}, Amount: {payment?.Total?.Format("C2")}");
+
+                    NetSuiteCustomerPayment? insertedNetSuiteCustomerPayment = new NetSuiteCustomerPayment();
+
+                    try
+                    {
+                        if (_netsuite != null)
+                            insertedNetSuiteCustomerPayment = await _netsuite.Add<NetSuiteCustomerPayment>("customerPayment", payment);
+                    }
+                    catch (Exception ex)
+                    {
+                        _log?.Error($"Error in UpdateNetSuiteCustomerPayment: {ex.Message}");
+                    }
+                }
             }
 
             //Testing
@@ -134,7 +165,7 @@ namespace NetSuiteIntegration.Services
             //Process the data
             ICollection<NetSuiteCustomer>? uniteNetSuiteCustomers = await ProcessEnrolments(enrolmentRepGen, readOnly, firstRecordOnly, forceInsertCustomer);
             //Disabled for now until Tax Schedule can be included
-            //ICollection<NetSuiteNonInventorySaleItem>? uniteNetSuiteNonInventorySaleItems = await ProcessCourses(courseRepGen, readOnly, firstRecordOnly, forceInsertCustomer);
+            ICollection<NetSuiteNonInventorySaleItem>? uniteNetSuiteNonInventorySaleItems = await ProcessCourses(courseRepGen, readOnly, firstRecordOnly, forceInsertCustomer);
 
             //If empty lists are returned then there has been an error as there should always be students and courses in scope
             if (uniteNetSuiteCustomers == null || uniteNetSuiteCustomers.Count == 0)
@@ -234,9 +265,9 @@ namespace NetSuiteIntegration.Services
                             if (forceInsertCustomer == true)
                             {
                                 _log?.Information($"**Force Insert Customer**: Will insert a new customer record even if one exists in NetSuite");
-                                uniteNetSuiteCustomer!.LastName = $"{uniteNetSuiteCustomer.LastName}_Inserted";
-                                uniteNetSuiteCustomer!.FirstName = $"{uniteNetSuiteCustomer.FirstName}_Inserted";
-                                uniteNetSuiteCustomer!.ExternalID = $"{uniteNetSuiteCustomer.ExternalID}_Inserted";
+                                uniteNetSuiteCustomer!.LastName = $"{uniteNetSuiteCustomer.LastName}_Inserted2";
+                                uniteNetSuiteCustomer!.FirstName = $"{uniteNetSuiteCustomer.FirstName}_Inserted2";
+                                uniteNetSuiteCustomer!.ExternalID = $"{uniteNetSuiteCustomer.ExternalID}_Inserted2";
                                 matchedCustomer = new NetSuiteCustomer();
                             }
                             else
@@ -397,7 +428,17 @@ namespace NetSuiteIntegration.Services
 
                             #region Find Non-Inventory Sale Item
                             //Find this course (non-inventory sale item) in NetSuite
-                            matchedSaleItem = await GetNetSuiteNonInventorySaleItem(saleItem ?? new NetSuiteNonInventorySaleItem());
+
+                            if (forceInsertCustomer == true)
+                            {
+                                _log?.Information($"**Force Insert Course**: Will insert a new non-inventory sale item record even if one exists in NetSuite");
+                                saleItem!.ExternalID = $"{saleItem.ExternalID}_Inserted";
+                                matchedSaleItem = new NetSuiteNonInventorySaleItem();
+                            }
+                            else
+                            {
+                                matchedSaleItem = await GetNetSuiteNonInventorySaleItem(saleItem ?? new NetSuiteNonInventorySaleItem());
+                            }
 
                             if (matchedSaleItem?.NonInventorySaleItemMatchType == NonInventorySaleItemMatchType.ByCourseCode)
                                 _log?.Information($"Course Found in NetSuite by Course Code with NetSuite Non-Inventory Sale Item ID: {matchedSaleItem?.ID}");
@@ -410,6 +451,8 @@ namespace NetSuiteIntegration.Services
                                 if (saleItem != null)
                                     saleItem.ID = matchedSaleItem?.ID;
                             }
+
+                            _log?.Information($"Subsiduary: {saleItem?.Subsidiary?.ID}");
                             #endregion
 
                             #region Perform Updates to NetSuite Non-Inventory Sale Item
@@ -546,7 +589,17 @@ namespace NetSuiteIntegration.Services
                             #region Find Invoice
                             //Find this fee (invoice) in NetSuite
                             //matchedInvoice = await GetNetSuiteInvoiceByCustomer(invoice ?? new NetSuiteInvoice());
-                            matchedInvoice = await GetNetSuiteSQLInvoiceByCustomer(invoice ?? new NetSuiteInvoice());
+
+                            if (forceInsertCustomer == true)
+                            {
+                                _log?.Information($"**Force Insert Invoice**: Will insert a new invoice record even if one exists in NetSuite");
+                                invoice!.ExternalID = $"{invoice.ExternalID}_Inserted";
+                                matchedInvoice = new NetSuiteInvoice();
+                            }
+                            else
+                            {
+                                matchedInvoice = await GetNetSuiteSQLInvoiceByCustomer(invoice ?? new NetSuiteInvoice());
+                            }
 
                             if (matchedInvoice?.InvoiceMatchType == InvoiceMatchType.ByCustomerIDAndAmount)
                                 _log?.Information($"Invoice Found in NetSuite by Customer ID and Total Amount with NetSuite Invoice Item ID: {matchedInvoice?.ID}");
@@ -616,6 +669,7 @@ namespace NetSuiteIntegration.Services
                             //Update the invoice lines in NetSuite
                             bool? invoiceLinesUpdated = false;
                             if (invoice != null)
+                                _log?.Information($"Subsiduary: {invoice?.Subsidiary?.ID}");
                                 invoiceLinesUpdated = await UpdateNetSuiteInvoiceItems(invoice, readOnly);
 
                             #endregion
@@ -722,7 +776,17 @@ namespace NetSuiteIntegration.Services
 
                             #region Find Credit Note
                             //Find this credit note (credit memo) in NetSuite
-                            matchedCreditMemo = await GetNetSuiteSQLCreditMemo(creditMemo ?? new NetSuiteCreditMemo());
+
+                            if (forceInsertCustomer == true)
+                            {
+                                _log?.Information($"**Force Insert Credit Memo**: Will insert a new credit memo record even if one exists in NetSuite");
+                                creditMemo!.ExternalID = $"{creditMemo.ExternalID}_Inserted";
+                                matchedCreditMemo = new NetSuiteCreditMemo();
+                            }
+                            else
+                            {
+                                matchedCreditMemo = await GetNetSuiteSQLCreditMemo(creditMemo ?? new NetSuiteCreditMemo());
+                            }
 
                             if (matchedCreditMemo?.CreditMemoMatchType == CreditMemoMatchType.ByCustomerIDAndAmount)
                                 _log?.Information($"Credit Note Found in NetSuite by Customer ID and Total Amount with NetSuite Credit Memo Item ID: {matchedCreditMemo?.ID}");
@@ -899,7 +963,17 @@ namespace NetSuiteIntegration.Services
 
                             #region Find Refund
                             //Find this refund (customer refund) in NetSuite
-                            matchedCustomerRefund = await GetNetSuiteSQLCustomerRefund(refund ?? new NetSuiteCustomerRefund());
+
+                            if (forceInsertCustomer == true)
+                            {
+                                _log?.Information($"**Force Insert Credit Memo**: Will insert a new credit memo record even if one exists in NetSuite");
+                                //refund!.ExternalID = $"{refund.ExternalID}_Inserted";
+                                matchedCustomerRefund = new NetSuiteCustomerRefund();
+                            }
+                            else
+                            {
+                                matchedCustomerRefund = await GetNetSuiteSQLCustomerRefund(refund ?? new NetSuiteCustomerRefund());
+                            }
 
                             if (matchedCustomerRefund?.CustomerRefundMatchType == CustomerRefundMatchType.ByCustomerIDAndAmount)
                                 _log?.Information($"Refund Found in NetSuite by Customer ID and Total Amount with NetSuite Customer Refund Item ID: {matchedCustomerRefund?.ID}");

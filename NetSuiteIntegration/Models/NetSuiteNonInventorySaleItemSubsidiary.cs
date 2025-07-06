@@ -11,5 +11,9 @@ namespace NetSuiteIntegration.Models
     public class NetSuiteNonInventorySaleItemSubsidiary
     {
         public ICollection<NetSuiteLink>? Links { get; set; }
+        public string? ID { get; set; }
+        public string? RefName { get; set; }
+        //Added to capture items below
+        public ICollection<NetSuiteNonInventorySaleItemSubsidiaryItem>? Items { get; set; }
     }
 }

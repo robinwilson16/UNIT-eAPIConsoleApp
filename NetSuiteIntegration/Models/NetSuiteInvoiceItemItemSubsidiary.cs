@@ -13,5 +13,6 @@ namespace NetSuiteIntegration.Models
         public ICollection<NetSuiteLink>? Links { get; set; }
         public string? ID { get; set; }
         public string? RefName { get; set; }
+        public ICollection<NetSuiteInvoiceItemItemSubsidiaryItem>? Items { get; set; }
     }
 }
