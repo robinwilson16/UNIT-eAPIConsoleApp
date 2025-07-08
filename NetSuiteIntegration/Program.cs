@@ -108,7 +108,8 @@ namespace NetSuiteIntegration
             using NetsuiteContext dbContext = dbContextFactory.CreateDbContext();
             //Get the currently enabled enviroment
             //Netsuite has a sandbox and unite has a test database with it's own endpoint.
-            var settings = await (from c in dbContext.Settings where c.Enabled == true select c).FirstOrDefaultAsync();
+            //var settings = await (from c in dbContext.Settings where c.Enabled == true select c).FirstOrDefaultAsync();
+            var settings = await (from c in dbContext.Settings where c.Enviroment == "SandboxtToTest" select c).FirstOrDefaultAsync();
 
             //Populate the application settings to a singleton to avoid repeated database calls
             ApplicationSettings? appSettings = serviceProvider.GetService<ApplicationSettings>();

@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using System.Net;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using NetSuiteIntegration.Data;
 using NetSuiteIntegration.Interfaces;
@@ -100,7 +101,14 @@ namespace NetSuiteIntegration.Services
                 _log?.Information($"Found {netSuiteCustomerPayments.Count} NetSuite Customer Payments");
                 foreach (NetSuiteCustomerPayment? payment in netSuiteCustomerPayments)
                 {
-                    _log?.Information($"Payment ID: {payment?.ID}, Amount: {payment?.Total?.Format("C2")}");
+                    _log?.Information($"Payment Customer ID: {payment?.Customer?.ID}, Amount: {payment?.Total?.Format("C2")}");
+
+                    var options = new JsonSerializerOptions { 
+                        WriteIndented = true, 
+                        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.Never 
+                    };
+
+                    Console.WriteLine(JsonSerializer.Serialize(payment, payment.GetType(), options));
 
                     NetSuiteCustomerPayment? insertedNetSuiteCustomerPayment = new NetSuiteCustomerPayment();
 

@@ -993,8 +993,7 @@ namespace NetSuiteIntegration.Services
             {
                 Account = new NetSuiteCustomerPaymentAccount
                 {
-                    ID = "532",
-                    RefName = "20134 Total Bank and Cash in Hand : Lloyds Bank ending 0909_MET FILM SCHOOL LTD / GBP"
+                    ID = "2760"
                 },
                 Applied = 9999.0,
                 Aracct = new NetSuiteCustomerPaymentAracct
@@ -1056,14 +1055,7 @@ namespace NetSuiteIntegration.Services
                 },
                 Subsidiary = new NetSuiteCustomerPaymentSubsidiary
                 {
-                    //ID = cus.NetSuiteSubsiduaryID
-                    Items = new List<NetSuiteCustomerPaymentSubsidiaryItem>
-                    {
-                        new NetSuiteCustomerPaymentSubsidiaryItem
-                        {
-                            ID = cus.Subsidiary?.ID,
-                        }
-                    }
+                    ID = cus.Subsidiary?.ID
                 },
                 ToBeEmailed = false,
                 Total = 9999.0,

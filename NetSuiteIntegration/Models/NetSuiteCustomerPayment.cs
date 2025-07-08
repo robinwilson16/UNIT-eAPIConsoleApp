@@ -9,45 +9,45 @@ namespace NetSuiteIntegration.Models
 {
     public class NetSuiteCustomerPayment
     {
-        public ICollection<NetSuiteLink>? Links;
-        public NetSuiteCustomerPaymentAccount? Account;
-        public double? Applied;
-        public NetSuiteCustomerPaymentApply? Apply;
-        public NetSuiteCustomerPaymentAracct? Aracct;
-        public double? Balance;
-        public bool? Cleared;
-        public string? ClearedDate;
-        public DateTime? CreatedDate;
-        public NetSuiteCustomerPaymentCredit? Credit;
-        public NetSuiteCustomerPaymentCurrency? Currency;
-        public bool? Custbody9997AutocashAssertionField;
-        public bool? Custbody9997IsForEpDd;
-        public NetSuiteCustomerPaymentCustbodyAtlasNoHdn? CustbodyAtlasNoHdn;
-        public NetSuiteCustomerPaymentCustbodyAtlasYesHdn? CustbodyAtlasYesHdn;
-        public NetSuiteCustomerPaymentCustbodyAznCurrentUser? CustbodyAznCurrentUser;
-        public string? CustbodyExternalId;
-        public NetSuiteCustomerPaymentCustbodyNondeductibleRefTran? CustbodyNondeductibleRefTran;
-        public NetSuiteCustomerPaymentCustomer? Customer;
-        public NetSuiteCustomerPaymentCustomForm? CustomForm;
-        public NetSuiteCustomerPaymentDeposit? Deposit;
-        public double? ExchangeRate;
-        public bool? ExcludeFromGLNumbering;
-        public string? ExternalId;
+        public ICollection<NetSuiteLink>? Links { get; set; }
+        public NetSuiteCustomerPaymentAccount? Account { get; set; }
+        public double? Applied { get; set; }
+        public NetSuiteCustomerPaymentApply? Apply { get; set; }
+        public NetSuiteCustomerPaymentAracct? Aracct { get; set; }
+        public double? Balance { get; set; }
+        public bool? Cleared { get; set; }
+        public string? ClearedDate { get; set; }
+        public DateTime? CreatedDate { get; set; }
+        public NetSuiteCustomerPaymentCredit? Credit { get; set; }
+        public NetSuiteCustomerPaymentCurrency? Currency { get; set; }
+        public bool? Custbody9997AutocashAssertionField { get; set; }
+        public bool? Custbody9997IsForEpDd { get; set; }
+        public NetSuiteCustomerPaymentCustbodyAtlasNoHdn? CustbodyAtlasNoHdn { get; set; }
+        public NetSuiteCustomerPaymentCustbodyAtlasYesHdn? CustbodyAtlasYesHdn { get; set; }
+        public NetSuiteCustomerPaymentCustbodyAznCurrentUser? CustbodyAznCurrentUser { get; set; }
+        public string? CustbodyExternalId { get; set; }
+        public NetSuiteCustomerPaymentCustbodyNondeductibleRefTran? CustbodyNondeductibleRefTran { get; set; }
+        public NetSuiteCustomerPaymentCustomer? Customer { get; set; }
+        public NetSuiteCustomerPaymentCustomForm? CustomForm { get; set; }
+        public NetSuiteCustomerPaymentDeposit? Deposit { get; set; }
+        public double? ExchangeRate { get; set; }
+        public bool? ExcludeFromGLNumbering { get; set; }
+        public string? ExternalId { get; set; }
         [Key]
-        public string? ID;
-        public DateTime? LastModifiedDate;
-        public string? Memo;
-        public double? Payment;
-        public double? Pending;
-        public NetSuiteCustomerPaymentPostingPeriod? PostingPeriod;
-        public string? PrevDate;
-        public NetSuiteCustomerPaymentStatus? Status;
-        public NetSuiteCustomerPaymentSubsidiary? Subsidiary;
-        public bool? ToBeEmailed;
-        public double? Total;
-        public string? TranDate;
-        public string? TranId;
-        public double? Unapplied;
-        public NetSuiteCustomerPaymentUndepFunds? UndepFunds;
+        public string? ID { get; set; }
+        public DateTime? LastModifiedDate { get; set; }
+        public string? Memo { get; set; }
+        public double? Payment { get; set; }
+        public double? Pending { get; set; }
+        public NetSuiteCustomerPaymentPostingPeriod? PostingPeriod { get; set; }
+        public string? PrevDate { get; set; }
+        public NetSuiteCustomerPaymentStatus? Status { get; set; }
+        public NetSuiteCustomerPaymentSubsidiary? Subsidiary { get; set; }
+        public bool? ToBeEmailed { get; set; }
+        public double? Total { get; set; }
+        public string? TranDate { get; set; }
+        public string? TranId { get; set; }
+        public double? Unapplied { get; set; }
+        public NetSuiteCustomerPaymentUndepFunds? UndepFunds { get; set; }
     }
 }
